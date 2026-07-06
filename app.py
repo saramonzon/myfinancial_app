@@ -18,25 +18,26 @@ from financial_planner.charts import (
 )
 from financial_planner.config import load_config
 from financial_planner.export import export_results_to_excel, export_results_to_markdown
+from financial_planner.localization import localize_dataframe, metric_label, translate_value
 from financial_planner.products import generic_product_templates
 from financial_planner.reporting import build_report_bundle
 
 DEFAULT_INPUTS = Path("data/inputs.example.yaml")
 DEFAULT_PRODUCTS = Path("data/products.example.yaml")
-DEFAULT_EXCEL_EXPORT = Path("outputs/v1_0_results.xlsx")
-DEFAULT_MARKDOWN_EXPORT = Path("outputs/v1_0_report.md")
+DEFAULT_EXCEL_EXPORT = Path("outputs/resultados_v1_0.xlsx")
+DEFAULT_MARKDOWN_EXPORT = Path("outputs/informe_v1_0.md")
 
 
-st.set_page_config(page_title="Financial Planner", layout="wide")
+st.set_page_config(page_title="Planificador financiero", layout="wide")
 
-st.title("Financial Planner")
-st.caption("Generic long-term household financial planning tool for Spain.")
+st.title("Planificador financiero")
+st.caption("Herramienta genérica de planificación financiera familiar a largo plazo para España.")
 
 with st.sidebar:
-    st.header("Configuration")
-    inputs_path = Path(st.text_input("Inputs YAML", value=str(DEFAULT_INPUTS)))
-    products_path = Path(st.text_input("Products YAML", value=str(DEFAULT_PRODUCTS)))
-    run_button = st.button("Run simulation", type="primary")
+    st.header("Configuración")
+    inputs_path = Path(st.text_input("YAML de entradas", value=str(DEFAULT_INPUTS)))
+    products_path = Path(st.text_input("YAML de productos", value=str(DEFAULT_PRODUCTS)))
+    run_button = st.button("Ejecutar simulación", type="primary")
 
 required_state_keys = {
     "bundle",
@@ -67,7 +68,7 @@ if run_button or not required_state_keys.issubset(st.session_state.keys()):
     except (
         Exception
     ) as exc:  # pragma: no cover - Streamlit displays the validation detail.
-        st.error(f"Configuration or simulation error: {exc}")
+        st.error(f"Error de configuración o simulación: {exc}")
         st.stop()
 
 config = st.session_state["config"]
@@ -81,27 +82,30 @@ break_even = st.session_state["break_even"]
 amortize_vs_invest = st.session_state["amortize_vs_invest"]
 
 with st.sidebar:
-    st.header("Filters")
+    st.header("Filtros")
     all_strategies = sorted(results_df["strategy"].unique().tolist())
     selected_strategies = st.multiselect(
-        "Strategies",
+        "Estrategias",
         options=all_strategies,
         default=all_strategies,
+        format_func=translate_value,
     )
     min_year = int(results_df["year"].min())
     max_year = int(results_df["year"].max())
-    selected_years = st.slider("Years", min_year, max_year, (min_year, max_year))
+    selected_years = st.slider("Años", min_year, max_year, (min_year, max_year))
+    metric_options = [
+        "net_wealth",
+        "real_net_wealth",
+        "gross_wealth",
+        "taxes_paid",
+        "fees_paid",
+        "mortgage_balance",
+        "liquidity_gap",
+    ]
     metric = st.selectbox(
-        "Metric",
-        options=[
-            "net_wealth",
-            "real_net_wealth",
-            "gross_wealth",
-            "taxes_paid",
-            "fees_paid",
-            "mortgage_balance",
-            "liquidity_gap",
-        ],
+        "Métrica",
+        options=metric_options,
+        format_func=metric_label,
     )
 
 filtered_df = results_df.loc[
@@ -110,44 +114,46 @@ filtered_df = results_df.loc[
 ]
 
 if filtered_df.empty:
-    st.warning("No rows match the selected dashboard filters.")
+    st.warning("Ninguna fila coincide con los filtros seleccionados.")
     st.stop()
 
-st.subheader("Assumptions")
+st.subheader("Supuestos")
 left, middle, right = st.columns(3)
-left.metric("Annual savings", f"{config.household.annual_savings:,.0f}")
-middle.metric("Mortgage rate", f"{config.mortgage.annual_interest_rate:.2%}")
-right.metric("Retirement age", config.household.retirement_age)
+left.metric("Ahorro anual", f"{config.household.annual_savings:,.0f}")
+middle.metric("Tipo de hipoteca", f"{config.mortgage.annual_interest_rate:.2%}")
+right.metric("Edad de jubilación", config.household.retirement_age)
 
 if warnings:
-    st.subheader("Validation warnings")
+    st.subheader("Avisos de validación")
     warnings_df = pd.DataFrame([warning.__dict__ for warning in warnings])
-    st.dataframe(warnings_df, width="stretch")
+    st.dataframe(localize_dataframe(warnings_df), width="stretch")
 
 overview_tab, simulation_tab, decision_tab, scenario_tab, product_tab, export_tab = (
-    st.tabs(["Overview", "Simulation", "Decisions", "Scenarios", "Products", "Exports"])
+    st.tabs(["Resumen", "Simulación", "Decisiones", "Escenarios", "Productos", "Exportaciones"])
 )
 
 with overview_tab:
-    st.subheader("Strategy comparison")
+    st.subheader("Comparación de estrategias")
     final_rows = (
         filtered_df.sort_values("year").groupby("strategy", as_index=False).tail(1)
     )
     st.dataframe(
-        final_rows[
-            [
-                "strategy",
-                "year",
-                "net_wealth",
-                "real_net_wealth",
-                "gross_wealth",
-                "taxes_paid",
-                "fees_paid",
-                "mortgage_balance",
-                "liquidity",
-                "liquidity_gap",
+        localize_dataframe(
+            final_rows[
+                [
+                    "strategy",
+                    "year",
+                    "net_wealth",
+                    "real_net_wealth",
+                    "gross_wealth",
+                    "taxes_paid",
+                    "fees_paid",
+                    "mortgage_balance",
+                    "liquidity",
+                    "liquidity_gap",
+                ]
             ]
-        ],
+        ),
         width="stretch",
     )
     chart_left, chart_right = st.columns(2)
@@ -173,8 +179,8 @@ with overview_tab:
     )
 
 with simulation_tab:
-    st.subheader("Yearly simulation")
-    st.dataframe(filtered_df, width="stretch")
+    st.subheader("Simulación anual")
+    st.dataframe(localize_dataframe(filtered_df), width="stretch")
     chart_left, chart_right = st.columns(2)
     chart_left.plotly_chart(
         taxes_and_fees(filtered_df),
@@ -188,33 +194,35 @@ with simulation_tab:
     )
 
 with decision_tab:
-    st.subheader("Decision helpers")
+    st.subheader("Ayudantes de decisión")
     decision_left, decision_right = st.columns(2)
     decision_left.metric(
-        "Break-even commission",
+        "Comisión de equilibrio",
         (
-            "Not crossed"
+            "No se cruza"
             if break_even.break_even_commission is None
             else f"{break_even.break_even_commission:.2%}"
         ),
     )
-    decision_left.caption(f"{break_even.strategy} vs {break_even.benchmark_strategy}")
+    decision_left.caption(
+        f"{translate_value(break_even.strategy)} vs {translate_value(break_even.benchmark_strategy)}"
+    )
     decision_right.metric(
-        "Amortize vs invest difference",
+        "Diferencia amortizar vs invertir",
         f"{amortize_vs_invest.difference:,.0f}",
     )
     decision_right.caption(
-        f"Preferred by model assumptions: {amortize_vs_invest.preferred_option}"
+        f"Opción preferida por los supuestos: {translate_value(amortize_vs_invest.preferred_option)}"
     )
     if amortize_vs_invest.liquidity_warning:
-        st.warning(amortize_vs_invest.liquidity_warning)
-    st.dataframe(bundle.decision_summary, width="stretch")
+        st.warning("La liquidez actual está por debajo del objetivo antes de asignar ahorro extra.")
+    st.dataframe(localize_dataframe(bundle.decision_summary), width="stretch")
 
 with scenario_tab:
-    st.subheader("Scenario summary")
-    st.dataframe(bundle.scenario_summary, width="stretch")
-    st.subheader("Sensitivity")
-    st.dataframe(sensitivity_df, width="stretch")
+    st.subheader("Resumen de escenarios")
+    st.dataframe(localize_dataframe(bundle.scenario_summary), width="stretch")
+    st.subheader("Sensibilidad")
+    st.dataframe(localize_dataframe(sensitivity_df), width="stretch")
     st.plotly_chart(
         sensitivity_heatmap(sensitivity_df),
         width="stretch",
@@ -222,19 +230,19 @@ with scenario_tab:
     )
 
 with product_tab:
-    st.subheader("Product comparison")
-    st.dataframe(product_comparison_df, width="stretch")
-    st.subheader("Product templates")
+    st.subheader("Comparación de productos")
+    st.dataframe(localize_dataframe(product_comparison_df), width="stretch")
+    st.subheader("Plantillas de producto")
     templates_df = pd.DataFrame(
         [template.__dict__ for template in generic_product_templates()]
     )
-    st.dataframe(templates_df, width="stretch")
+    st.dataframe(localize_dataframe(templates_df), width="stretch")
 
 with export_tab:
-    st.subheader("Exports")
+    st.subheader("Exportaciones")
     export_path = export_results_to_excel(results, config, DEFAULT_EXCEL_EXPORT)
     st.download_button(
-        "Download Excel export",
+        "Descargar Excel",
         data=export_path.read_bytes(),
         file_name=export_path.name,
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -242,12 +250,12 @@ with export_tab:
 
     markdown_path = export_results_to_markdown(results, config, DEFAULT_MARKDOWN_EXPORT)
     st.download_button(
-        "Download Markdown report",
+        "Descargar informe Markdown",
         data=markdown_path.read_bytes(),
         file_name=markdown_path.name,
         mime="text/markdown",
     )
 
 st.caption(
-    "Simplified planning model only. This is not financial, tax, or legal advice."
+    "Modelo simplificado de planificación. No es asesoramiento financiero, fiscal ni legal."
 )

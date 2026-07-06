@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from financial_planner.localization import localize_dataframe, translate_value
 from financial_planner.models import SimulationConfig, StrategyResult
 from financial_planner.reporting import build_report_bundle
 from financial_planner.simulation import results_to_dataframe
@@ -53,7 +54,11 @@ def config_summary_dataframe(config: SimulationConfig) -> pd.DataFrame:
             {
                 "section": "product",
                 "name": product.name,
-                "value": f"{product.type}, return={product.expected_return}, fee={product.annual_commission}",
+                "value": (
+                    f"{translate_value(product.type)}, "
+                    f"rentabilidad={product.expected_return}, "
+                    f"comision={product.annual_commission}"
+                ),
             }
         )
     return pd.DataFrame(rows)
@@ -72,21 +77,29 @@ def export_results_to_excel(
     yearly = results_to_dataframe(results)
     final = yearly.sort_values("year").groupby("strategy", as_index=False).tail(1)
     with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
-        yearly.to_excel(writer, index=False, sheet_name="yearly_results")
-        final.to_excel(writer, index=False, sheet_name="final_comparison")
-        bundle.scenario_summary.to_excel(
-            writer, index=False, sheet_name="scenario_summary"
+        localize_dataframe(yearly).to_excel(
+            writer, index=False, sheet_name="resultados_anuales"
         )
-        bundle.sensitivity.to_excel(writer, index=False, sheet_name="sensitivity")
-        bundle.product_comparison.to_excel(
-            writer, index=False, sheet_name="product_comparison"
+        localize_dataframe(final).to_excel(
+            writer, index=False, sheet_name="comparacion_final"
         )
-        bundle.decision_summary.to_excel(
-            writer, index=False, sheet_name="decision_helpers"
+        localize_dataframe(bundle.scenario_summary).to_excel(
+            writer, index=False, sheet_name="escenarios"
         )
-        bundle.warnings_table.to_excel(writer, index=False, sheet_name="warnings")
-        config_summary_dataframe(config).to_excel(
-            writer, index=False, sheet_name="assumptions"
+        localize_dataframe(bundle.sensitivity).to_excel(
+            writer, index=False, sheet_name="sensibilidad"
+        )
+        localize_dataframe(bundle.product_comparison).to_excel(
+            writer, index=False, sheet_name="productos"
+        )
+        localize_dataframe(bundle.decision_summary).to_excel(
+            writer, index=False, sheet_name="decisiones"
+        )
+        localize_dataframe(bundle.warnings_table).to_excel(
+            writer, index=False, sheet_name="avisos"
+        )
+        localize_dataframe(config_summary_dataframe(config)).to_excel(
+            writer, index=False, sheet_name="supuestos"
         )
     return output_path
 
@@ -115,44 +128,44 @@ def export_results_to_markdown(
         "liquidity_gap",
     ]
     lines = [
-        "# Financial Planner Report",
+        "# Informe de planificación financiera",
         "",
-        "Simplified planning model only. This is not financial, tax, or legal advice.",
+        "Modelo simplificado de planificación. No es asesoramiento financiero, fiscal ni legal.",
         "",
-        "## Final Comparison",
+        "## Comparación final",
         "",
-        dataframe_to_markdown(final[comparison_columns]),
+        dataframe_to_markdown(localize_dataframe(final[comparison_columns])),
         "",
-        "## Decision Helpers",
+        "## Ayudantes de decisión",
         "",
-        dataframe_to_markdown(bundle.decision_summary),
+        dataframe_to_markdown(localize_dataframe(bundle.decision_summary)),
         "",
-        "## Scenario Summary",
+        "## Resumen de escenarios",
         "",
-        dataframe_to_markdown(bundle.scenario_summary),
+        dataframe_to_markdown(localize_dataframe(bundle.scenario_summary)),
         "",
-        "## Sensitivity Summary",
+        "## Resumen de sensibilidad",
         "",
-        dataframe_to_markdown(bundle.sensitivity),
+        dataframe_to_markdown(localize_dataframe(bundle.sensitivity)),
         "",
-        "## Product Comparison",
+        "## Comparación de productos",
         "",
-        dataframe_to_markdown(bundle.product_comparison),
+        dataframe_to_markdown(localize_dataframe(bundle.product_comparison)),
         "",
-        "## Validation Warnings",
+        "## Avisos de validación",
         "",
-        dataframe_to_markdown(bundle.warnings_table),
+        dataframe_to_markdown(localize_dataframe(bundle.warnings_table)),
         "",
-        "## Key Assumptions",
+        "## Supuestos clave",
         "",
-        dataframe_to_markdown(config_summary_dataframe(config)),
+        dataframe_to_markdown(localize_dataframe(config_summary_dataframe(config))),
         "",
-        "## Model Limitations",
+        "## Limitaciones del modelo",
         "",
-        "- Tax modelling is simplified and configurable.",
-        "- Product assumptions are generic and do not represent specific providers.",
-        "- Investment returns are deterministic expected returns, not stochastic forecasts.",
-        "- Net wealth assumes liquidation taxes where configured by the strategy.",
+        "- La fiscalidad es simplificada y configurable.",
+        "- Los supuestos de producto son genericos y no representan proveedores concretos.",
+        "- Las rentabilidades son expectativas deterministas, no previsiones estocasticas.",
+        "- El patrimonio neto incorpora impuestos de liquidacion cuando la estrategia lo configura.",
         "",
     ]
     output_path.write_text("\n".join(lines), encoding="utf-8")
