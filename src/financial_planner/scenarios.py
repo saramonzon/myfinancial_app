@@ -6,7 +6,9 @@ from financial_planner.models import ScenarioConfig, SimulationConfig, StrategyR
 from financial_planner.simulation import run_simulation
 
 
-def apply_scenario(config: SimulationConfig, scenario: ScenarioConfig) -> SimulationConfig:
+def apply_scenario(
+    config: SimulationConfig, scenario: ScenarioConfig
+) -> SimulationConfig:
     """Return a validated config with scenario overrides applied."""
 
     data = config.model_dump()
@@ -32,7 +34,9 @@ def apply_scenario(config: SimulationConfig, scenario: ScenarioConfig) -> Simula
     return SimulationConfig.model_validate(data)
 
 
-def configured_scenarios(config: SimulationConfig) -> list[tuple[str, SimulationConfig]]:
+def configured_scenarios(
+    config: SimulationConfig,
+) -> list[tuple[str, SimulationConfig]]:
     """Return baseline plus all configured scenario variants."""
 
     scenarios = [("baseline", config)]

@@ -198,7 +198,9 @@ class ScenarioManagerConfig(PlannerBaseModel):
 
 class PlanningConfig(PlannerBaseModel):
     withdrawals: WithdrawalConfig = Field(default_factory=WithdrawalConfig)
-    mixed_allocation: MixedAllocationConfig = Field(default_factory=MixedAllocationConfig)
+    mixed_allocation: MixedAllocationConfig = Field(
+        default_factory=MixedAllocationConfig
+    )
     sensitivity: SensitivityConfig = Field(default_factory=SensitivityConfig)
 
 
@@ -249,7 +251,9 @@ class SimulationConfig(PlannerBaseModel):
     products: list[ProductConfig] = Field(default_factory=list)
     strategies: StrategyConfig = Field(default_factory=StrategyConfig)
     planning: PlanningConfig = Field(default_factory=PlanningConfig)
-    scenario_manager: ScenarioManagerConfig = Field(default_factory=ScenarioManagerConfig)
+    scenario_manager: ScenarioManagerConfig = Field(
+        default_factory=ScenarioManagerConfig
+    )
 
 
 class YearlyResult(PlannerBaseModel):

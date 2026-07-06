@@ -124,13 +124,15 @@ if warnings:
     warnings_df = pd.DataFrame([warning.__dict__ for warning in warnings])
     st.dataframe(warnings_df, width="stretch")
 
-overview_tab, simulation_tab, decision_tab, scenario_tab, product_tab, export_tab = st.tabs(
-    ["Overview", "Simulation", "Decisions", "Scenarios", "Products", "Exports"]
+overview_tab, simulation_tab, decision_tab, scenario_tab, product_tab, export_tab = (
+    st.tabs(["Overview", "Simulation", "Decisions", "Scenarios", "Products", "Exports"])
 )
 
 with overview_tab:
     st.subheader("Strategy comparison")
-    final_rows = filtered_df.sort_values("year").groupby("strategy", as_index=False).tail(1)
+    final_rows = (
+        filtered_df.sort_values("year").groupby("strategy", as_index=False).tail(1)
+    )
     st.dataframe(
         final_rows[
             [
@@ -196,9 +198,7 @@ with decision_tab:
             else f"{break_even.break_even_commission:.2%}"
         ),
     )
-    decision_left.caption(
-        f"{break_even.strategy} vs {break_even.benchmark_strategy}"
-    )
+    decision_left.caption(f"{break_even.strategy} vs {break_even.benchmark_strategy}")
     decision_right.metric(
         "Amortize vs invest difference",
         f"{amortize_vs_invest.difference:,.0f}",

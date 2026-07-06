@@ -8,7 +8,11 @@ from financial_planner.models import ProductType, SimulationConfig, StrategyName
 from financial_planner.mortgage import interest_saved_by_early_repayment
 from financial_planner.products import find_product
 from financial_planner.sensitivity import replace_product_assumptions
-from financial_planner.simulation import results_to_dataframe, run_simulation, simulation_years
+from financial_planner.simulation import (
+    results_to_dataframe,
+    run_simulation,
+    simulation_years,
+)
 from financial_planner.taxes import savings_tax
 
 
@@ -34,7 +38,9 @@ class AmortizeVsInvestDecision:
     liquidity_warning: str | None
 
 
-def final_net_wealth_for_strategy(config: SimulationConfig, strategy: StrategyName) -> float:
+def final_net_wealth_for_strategy(
+    config: SimulationConfig, strategy: StrategyName
+) -> float:
     """Return final net wealth for one enabled strategy."""
 
     df = results_to_dataframe(run_simulation(config))
@@ -62,8 +68,12 @@ def break_even_commission(
 
     product = find_product(config.products, product_type)
     target = final_net_wealth_for_strategy(config, benchmark_strategy)
-    low_config = replace_product_assumptions(config, product_type, product.expected_return, low)
-    high_config = replace_product_assumptions(config, product_type, product.expected_return, high)
+    low_config = replace_product_assumptions(
+        config, product_type, product.expected_return, low
+    )
+    high_config = replace_product_assumptions(
+        config, product_type, product.expected_return, high
+    )
     low_value = final_net_wealth_for_strategy(low_config, strategy)
     high_value = final_net_wealth_for_strategy(high_config, strategy)
 
@@ -136,7 +146,9 @@ def amortize_vs_invest_decision(config: SimulationConfig) -> AmortizeVsInvestDec
     preferred = "investment" if difference > 0 else "mortgage_amortization"
     liquidity_warning = None
     if config.household.current_liquidity < config.household.target_liquidity:
-        liquidity_warning = "Current liquidity is below target before allocating extra savings."
+        liquidity_warning = (
+            "Current liquidity is below target before allocating extra savings."
+        )
 
     return AmortizeVsInvestDecision(
         annual_extra_amortization=annual_extra,

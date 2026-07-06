@@ -166,9 +166,7 @@ def _simulate_product_strategy(
         net_assets = balance - liquidation_tax_due
         mortgage_balance = mortgage_balances[offset]
         total_taxes = liquidation_tax_due + withdrawal_result.tax
-        net_wealth = (
-            net_assets + config.household.current_liquidity - mortgage_balance
-        )
+        net_wealth = net_assets + config.household.current_liquidity - mortgage_balance
         rows.append(
             YearlyResult(
                 strategy=strategy,
@@ -268,9 +266,7 @@ def simulate_pension_plan_reinvest_tax_saving(
         )
         net_assets = pension_balance + fund_balance - pension_tax_due - fund_tax_due
         mortgage_balance = mortgage_balances[offset]
-        net_wealth = (
-            net_assets + config.household.current_liquidity - mortgage_balance
-        )
+        net_wealth = net_assets + config.household.current_liquidity - mortgage_balance
 
         rows.append(
             YearlyResult(
@@ -379,9 +375,13 @@ def simulate_mixed_allocation(config: SimulationConfig) -> StrategyResult:
         )
         unit_contribution = config.household.annual_savings * allocation.unit_linked
 
-        fund_year = grow_one_year(fund_balance, fund_contribution, fund, fund_cost_basis)
+        fund_year = grow_one_year(
+            fund_balance, fund_contribution, fund, fund_cost_basis
+        )
         pension_year = grow_one_year(pension_balance, pension_contribution, pension)
-        unit_year = grow_one_year(unit_balance, unit_contribution, unit_linked, unit_cost_basis)
+        unit_year = grow_one_year(
+            unit_balance, unit_contribution, unit_linked, unit_cost_basis
+        )
         fund_balance = fund_year.ending_balance
         fund_cost_basis = fund_year.cost_basis
         pension_balance = pension_year.ending_balance
@@ -426,9 +426,7 @@ def simulate_mixed_allocation(config: SimulationConfig) -> StrategyResult:
             - pension_tax_due
         )
         mortgage_balance = mortgage_balances[offset]
-        net_wealth = (
-            net_assets + config.household.current_liquidity - mortgage_balance
-        )
+        net_wealth = net_assets + config.household.current_liquidity - mortgage_balance
 
         rows.append(
             YearlyResult(
@@ -440,7 +438,10 @@ def simulate_mixed_allocation(config: SimulationConfig) -> StrategyResult:
                 real_net_wealth=real_value(
                     net_wealth, config.assumptions.inflation, offset + 1
                 ),
-                taxes_paid=fund_tax_due + unit_tax_due + pension_tax_due + withdrawal_tax,
+                taxes_paid=fund_tax_due
+                + unit_tax_due
+                + pension_tax_due
+                + withdrawal_tax,
                 fees_paid=total_fees,
                 mortgage_balance=mortgage_balance,
                 liquidity=config.household.current_liquidity,

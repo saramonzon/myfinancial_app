@@ -37,7 +37,10 @@ def validation_warnings(config: SimulationConfig) -> list[ValidationWarning]:
 
     product_types = {product.type for product in config.products}
     for strategy in config.strategies.enabled:
-        if strategy == "investment_fund_only" and "investment_fund" not in product_types:
+        if (
+            strategy == "investment_fund_only"
+            and "investment_fund" not in product_types
+        ):
             warnings.append(
                 ValidationWarning(
                     code="missing_investment_fund",
