@@ -1,0 +1,8 @@
+name: Example unit linked
+type: unit_linked
+expected_return: 0.06
+annual_commission: 0.0167
+insurance_cost: 0.0
+tax_treatment: savings_income
+liquidity: medium_high
+notes: Example only. Replace with real product assumptions.

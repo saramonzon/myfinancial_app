@@ -1,0 +1,98 @@
+household:
+  current_year: 2026
+  retirement_age: 67
+  annual_savings: 16800
+  current_liquidity: 10000
+  target_liquidity: 30000
+
+people:
+  - name: Person A
+    age: 37
+    gross_salary: 46341
+    current_marginal_tax_rate: 0.37
+    expected_future_marginal_tax_rate: 0.30
+  - name: Person B
+    age: 39
+    gross_salary: 37547
+    current_marginal_tax_rate: 0.30
+    expected_future_marginal_tax_rate: 0.30
+
+mortgage:
+  initial_principal: 281000
+  annual_interest_rate: 0.0215
+  term_years: 30
+  annual_extra_amortization: 4800
+  extra_amortization_mode: reduce_term
+
+assumptions:
+  inflation: 0.02
+  salary_growth: 0.02
+  default_market_return: 0.06
+  default_remunerated_account_return: 0.025
+  pension_redemption_years: 20
+
+tax:
+  pension_contribution_limit_per_person: 1500
+  savings_tax_brackets:
+    - up_to: 6000
+      rate: 0.19
+    - up_to: 50000
+      rate: 0.21
+    - up_to: 200000
+      rate: 0.23
+    - up_to:
+      rate: 0.27
+  general_income_tax_brackets:
+    - up_to: 12450
+      rate: 0.19
+    - up_to: 20200
+      rate: 0.24
+    - up_to: 35200
+      rate: 0.30
+    - up_to: 60000
+      rate: 0.37
+    - up_to: 300000
+      rate: 0.45
+    - up_to:
+      rate: 0.47
+
+strategies:
+  enabled:
+    - investment_fund_only
+    - pension_plan_reinvest_tax_saving
+    - unit_linked
+    - mortgage_amortization
+    - mixed_allocation
+
+planning:
+  withdrawals:
+    annual_amount: 0
+    start_year:
+    end_year:
+  mixed_allocation:
+    investment_fund: 0.40
+    pension_plan: 0.20
+    unit_linked: 0.20
+    mortgage_amortization: 0.20
+  sensitivity:
+    product_type: investment_fund
+    strategy: investment_fund_only
+    commission_rates:
+      - 0.0
+      - 0.003
+      - 0.008
+      - 0.015
+    expected_returns:
+      - 0.03
+      - 0.05
+      - 0.07
+
+scenario_manager:
+  scenarios:
+    - name: lower_return
+      expected_return_shift: -0.01
+      commission_shift: 0
+    - name: higher_savings
+      annual_savings: 20000
+      expected_return_shift: 0
+      commission_shift: 0

@@ -1,0 +1,37 @@
+products:
+  - name: Remunerated account
+    type: remunerated_account
+    expected_return: 0.025
+    annual_commission: 0.0
+    tax_treatment: savings_income
+    liquidity: immediate
+
+  - name: Money market fund
+    type: money_market_fund
+    expected_return: 0.025
+    annual_commission: 0.002
+    tax_treatment: savings_income_deferred
+    liquidity: high
+
+  - name: Global investment fund
+    type: investment_fund
+    expected_return: 0.06
+    annual_commission: 0.003
+    tax_treatment: savings_income_deferred
+    liquidity: high
+
+  - name: Pension plan
+    type: pension_plan
+    expected_return: 0.06
+    annual_commission: 0.008
+    annual_contribution_limit_per_person: 1500
+    tax_treatment: general_income_on_redemption
+    liquidity: restricted
+
+  - name: Unit linked
+    type: unit_linked
+    expected_return: 0.06
+    annual_commission: 0.0167
+    insurance_cost: 0.0
+    tax_treatment: savings_income
+    liquidity: medium_high

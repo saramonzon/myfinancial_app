@@ -1,0 +1,7 @@
+name: Example global investment fund
+type: investment_fund
+expected_return: 0.06
+annual_commission: 0.003
+tax_treatment: savings_income_deferred
+liquidity: high
+notes: Example only. Replace with real product assumptions.

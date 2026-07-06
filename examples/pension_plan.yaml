@@ -1,0 +1,8 @@
+name: Example pension plan
+type: pension_plan
+expected_return: 0.06
+annual_commission: 0.008
+annual_contribution_limit_per_person: 1500
+tax_treatment: general_income_on_redemption
+liquidity: restricted
+notes: Example only. Replace with real product assumptions.

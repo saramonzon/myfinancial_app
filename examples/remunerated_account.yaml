@@ -1,0 +1,7 @@
+name: Example remunerated account
+type: remunerated_account
+expected_return: 0.025
+annual_commission: 0.0
+tax_treatment: savings_income
+liquidity: immediate
+notes: Example only. Replace with real product assumptions.

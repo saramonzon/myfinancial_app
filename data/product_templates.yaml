@@ -1,0 +1,42 @@
+templates:
+  - name: Remunerated account template
+    type: remunerated_account
+    expected_return: 0.02
+    annual_commission: 0.0
+    tax_treatment: savings_income
+    liquidity: immediate
+    notes: Generic template. Replace assumptions before using.
+
+  - name: Money market fund template
+    type: money_market_fund
+    expected_return: 0.025
+    annual_commission: 0.002
+    tax_treatment: savings_income_deferred
+    liquidity: high
+    notes: Generic template. Replace assumptions before using.
+
+  - name: Investment fund template
+    type: investment_fund
+    expected_return: 0.05
+    annual_commission: 0.005
+    tax_treatment: savings_income_deferred
+    liquidity: high
+    notes: Generic template. Replace assumptions before using.
+
+  - name: Pension plan template
+    type: pension_plan
+    expected_return: 0.05
+    annual_commission: 0.008
+    annual_contribution_limit_per_person: 1500
+    tax_treatment: general_income_on_redemption
+    liquidity: restricted
+    notes: Generic template. Replace assumptions before using.
+
+  - name: Unit linked template
+    type: unit_linked
+    expected_return: 0.05
+    annual_commission: 0.015
+    insurance_cost: 0.0
+    tax_treatment: savings_income
+    liquidity: medium_high
+    notes: Generic template. Replace assumptions before using.
