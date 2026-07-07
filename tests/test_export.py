@@ -22,6 +22,7 @@ def test_markdown_export_contains_final_comparison(tmp_path) -> None:
     assert "Monte Carlo" in text
     assert "Resumen de sensibilidad" in text
     assert "solo_fondo_inversion" in text
+    assert "6,000.00" in text
 
 
 def test_excel_export_contains_v1_sheets(tmp_path) -> None:

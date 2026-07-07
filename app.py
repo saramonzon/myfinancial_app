@@ -18,7 +18,12 @@ from financial_planner.charts import (
 )
 from financial_planner.config import load_config
 from financial_planner.export import export_results_to_excel, export_results_to_markdown
-from financial_planner.localization import localize_dataframe, metric_label, translate_value
+from financial_planner.localization import (
+    format_number_for_display,
+    localize_display_dataframe,
+    metric_label,
+    translate_value,
+)
 from financial_planner.products import generic_product_templates
 from financial_planner.reporting import build_report_bundle
 
@@ -119,14 +124,14 @@ if filtered_df.empty:
 
 st.subheader("Supuestos")
 left, middle, right = st.columns(3)
-left.metric("Ahorro anual", f"{config.household.annual_savings:,.0f}")
+left.metric("Ahorro anual", format_number_for_display(config.household.annual_savings))
 middle.metric("Tipo de hipoteca", f"{config.mortgage.annual_interest_rate:.2%}")
 right.metric("Edad de jubilación", config.household.retirement_age)
 
 if warnings:
     st.subheader("Avisos de validación")
     warnings_df = pd.DataFrame([warning.__dict__ for warning in warnings])
-    st.dataframe(localize_dataframe(warnings_df), width="stretch")
+    st.dataframe(localize_display_dataframe(warnings_df), width="stretch")
 
 overview_tab, simulation_tab, decision_tab, scenario_tab, product_tab, export_tab = (
     st.tabs(["Resumen", "Simulación", "Decisiones", "Escenarios", "Productos", "Exportaciones"])
@@ -138,7 +143,7 @@ with overview_tab:
         filtered_df.sort_values("year").groupby("strategy", as_index=False).tail(1)
     )
     st.dataframe(
-        localize_dataframe(
+        localize_display_dataframe(
             final_rows[
                 [
                     "strategy",
@@ -180,7 +185,7 @@ with overview_tab:
 
 with simulation_tab:
     st.subheader("Simulación anual")
-    st.dataframe(localize_dataframe(filtered_df), width="stretch")
+    st.dataframe(localize_display_dataframe(filtered_df), width="stretch")
     chart_left, chart_right = st.columns(2)
     chart_left.plotly_chart(
         taxes_and_fees(filtered_df),
@@ -209,28 +214,28 @@ with decision_tab:
     )
     decision_right.metric(
         "Diferencia amortizar vs invertir",
-        f"{amortize_vs_invest.difference:,.0f}",
+        format_number_for_display(amortize_vs_invest.difference),
     )
     decision_right.caption(
         f"Opción preferida por los supuestos: {translate_value(amortize_vs_invest.preferred_option)}"
     )
     if amortize_vs_invest.liquidity_warning:
         st.warning("La liquidez actual está por debajo del objetivo antes de asignar ahorro extra.")
-    st.dataframe(localize_dataframe(bundle.decision_summary), width="stretch")
+    st.dataframe(localize_display_dataframe(bundle.decision_summary), width="stretch")
 
 with scenario_tab:
     st.subheader("Resumen de escenarios")
-    st.dataframe(localize_dataframe(bundle.scenario_summary), width="stretch")
+    st.dataframe(localize_display_dataframe(bundle.scenario_summary), width="stretch")
     st.subheader("Plantillas de escenario")
-    st.dataframe(localize_dataframe(bundle.scenario_templates), width="stretch")
+    st.dataframe(localize_display_dataframe(bundle.scenario_templates), width="stretch")
     st.subheader("Comprobación de coherencia")
     st.warning("Los euros nominales futuros no equivalen a poder adquisitivo actual.")
-    st.dataframe(localize_dataframe(bundle.sanity_check), width="stretch")
+    st.dataframe(localize_display_dataframe(bundle.sanity_check), width="stretch")
     if not bundle.monte_carlo.empty:
         st.subheader("Monte Carlo")
-        st.dataframe(localize_dataframe(bundle.monte_carlo), width="stretch")
+        st.dataframe(localize_display_dataframe(bundle.monte_carlo), width="stretch")
     st.subheader("Sensibilidad")
-    st.dataframe(localize_dataframe(sensitivity_df), width="stretch")
+    st.dataframe(localize_display_dataframe(sensitivity_df), width="stretch")
     st.plotly_chart(
         sensitivity_heatmap(sensitivity_df),
         width="stretch",
@@ -239,12 +244,12 @@ with scenario_tab:
 
 with product_tab:
     st.subheader("Comparación de productos")
-    st.dataframe(localize_dataframe(product_comparison_df), width="stretch")
+    st.dataframe(localize_display_dataframe(product_comparison_df), width="stretch")
     st.subheader("Plantillas de producto")
     templates_df = pd.DataFrame(
         [template.__dict__ for template in generic_product_templates()]
     )
-    st.dataframe(localize_dataframe(templates_df), width="stretch")
+    st.dataframe(localize_display_dataframe(templates_df), width="stretch")
 
 with export_tab:
     st.subheader("Exportaciones")

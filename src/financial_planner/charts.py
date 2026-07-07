@@ -9,11 +9,20 @@ from plotly.graph_objects import Figure
 from financial_planner.localization import metric_label, translate_value
 
 
+VALUE_FORMAT = ",.2f"
+
+
 def _localized_plot_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     localized = df.copy()
     if "strategy" in localized.columns:
         localized["strategy"] = localized["strategy"].map(translate_value)
     return localized
+
+
+def _format_numeric_axes(fig: Figure) -> Figure:
+    fig.update_yaxes(tickformat=VALUE_FORMAT)
+    fig.update_traces(hovertemplate=None)
+    return fig
 
 
 def wealth_over_time(df: pd.DataFrame) -> Figure:
@@ -25,7 +34,7 @@ def metric_over_time(df: pd.DataFrame, metric: str) -> Figure:
 
     if metric not in df.columns:
         raise ValueError(f"Unknown metric: {metric}")
-    return px.line(
+    fig = px.line(
         _localized_plot_dataframe(df),
         x="year",
         y=metric,
@@ -38,24 +47,26 @@ def metric_over_time(df: pd.DataFrame, metric: str) -> Figure:
         },
         title=f"{metric_label(metric)} por año",
     )
+    return _format_numeric_axes(fig)
 
 
 def final_net_wealth(df: pd.DataFrame) -> Figure:
     final = _localized_plot_dataframe(
         df.sort_values("year").groupby("strategy", as_index=False).tail(1)
     )
-    return px.bar(
+    fig = px.bar(
         final,
         x="strategy",
         y="net_wealth",
         color="strategy",
-        text_auto=".2s",
+        text_auto=VALUE_FORMAT,
         labels={
             "strategy": "Estrategia",
             "net_wealth": "Patrimonio neto",
         },
         title="Patrimonio neto final por estrategia",
     )
+    return _format_numeric_axes(fig)
 
 
 def taxes_and_fees(df: pd.DataFrame) -> Figure:
@@ -69,7 +80,7 @@ def taxes_and_fees(df: pd.DataFrame) -> Figure:
         value_name="amount",
     )
     melted["metric"] = melted["metric"].map(metric_label)
-    return px.bar(
+    fig = px.bar(
         melted,
         x="strategy",
         y="amount",
@@ -82,10 +93,11 @@ def taxes_and_fees(df: pd.DataFrame) -> Figure:
         },
         title="Impuestos y comisiones",
     )
+    return _format_numeric_axes(fig)
 
 
 def mortgage_balance(df: pd.DataFrame) -> Figure:
-    return px.line(
+    fig = px.line(
         _localized_plot_dataframe(df),
         x="year",
         y="mortgage_balance",
@@ -98,6 +110,7 @@ def mortgage_balance(df: pd.DataFrame) -> Figure:
         },
         title="Saldo de hipoteca por año",
     )
+    return _format_numeric_axes(fig)
 
 
 def sensitivity_heatmap(df: pd.DataFrame) -> Figure:
@@ -110,7 +123,7 @@ def sensitivity_heatmap(df: pd.DataFrame) -> Figure:
         columns="annual_commission",
         values="final_net_wealth",
     )
-    return px.imshow(
+    fig = px.imshow(
         pivot,
         labels={
             "x": "Comisión anual",
@@ -119,8 +132,11 @@ def sensitivity_heatmap(df: pd.DataFrame) -> Figure:
         },
         title="Sensibilidad: comisión vs rentabilidad",
         aspect="auto",
-        text_auto=".2s",
+        text_auto=VALUE_FORMAT,
     )
+    fig.update_coloraxes(colorbar_tickformat=VALUE_FORMAT)
+    fig.update_traces(hovertemplate=None)
+    return fig
 
 
 def final_metric_bar(df: pd.DataFrame, metric: str) -> Figure:
@@ -131,15 +147,16 @@ def final_metric_bar(df: pd.DataFrame, metric: str) -> Figure:
     final = _localized_plot_dataframe(
         df.sort_values("year").groupby("strategy", as_index=False).tail(1)
     )
-    return px.bar(
+    fig = px.bar(
         final,
         x="strategy",
         y=metric,
         color="strategy",
-        text_auto=".2s",
+        text_auto=VALUE_FORMAT,
         labels={
             "strategy": "Estrategia",
             metric: metric_label(metric),
         },
         title=f"{metric_label(metric)} final por estrategia",
     )
+    return _format_numeric_axes(fig)

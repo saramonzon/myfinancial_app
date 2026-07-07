@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 import pandas as pd
+from pandas.api.types import is_numeric_dtype
 
 
 COLUMN_LABELS_ES: dict[str, str] = {
@@ -130,6 +131,19 @@ METRIC_LABELS_ES: dict[str, str] = {
     "liquidity_gap": "Brecha de liquidez",
 }
 
+
+INTEGER_DISPLAY_COLUMNS: set[str] = {
+    "year",
+    "año",
+    "age",
+    "edad",
+    "simulation_years",
+    "años_simulacion",
+    "simulations",
+    "simulaciones",
+}
+
+
 def translate_value(value: Any) -> Any:
     """Translate known display values to Spanish and leave other values unchanged."""
 
@@ -165,3 +179,37 @@ def metric_label(metric: str) -> str:
     """Return a Spanish human label for a metric key."""
 
     return METRIC_LABELS_ES.get(metric, metric)
+
+
+def format_number_for_display(value: Any, column: str | None = None) -> Any:
+    """Format numeric display values without changing calculation dataframes."""
+
+    if isinstance(value, bool) or pd.isna(value):
+        return value
+    if isinstance(value, int | float):
+        if column in INTEGER_DISPLAY_COLUMNS:
+            return f"{value:.0f}"
+        if isinstance(value, int) and abs(value) < 1_000:
+            return str(value)
+        return f"{value:,.2f}"
+    return value
+
+
+def format_display_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    """Return a copy with numeric values formatted for UI and Markdown display."""
+
+    display = df.copy()
+    for column in display.columns:
+        if is_numeric_dtype(display[column]):
+            display[column] = display[column].map(
+                lambda value, column_name=str(column): format_number_for_display(
+                    value, column_name
+                )
+            )
+    return display
+
+
+def localize_display_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    """Return a localized dataframe with display-formatted numeric values."""
+
+    return format_display_dataframe(localize_dataframe(df))
