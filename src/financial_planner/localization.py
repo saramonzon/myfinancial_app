@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any
 
 import pandas as pd
-from pandas.api.types import is_numeric_dtype
 
 
 COLUMN_LABELS_ES: dict[str, str] = {
@@ -200,12 +199,11 @@ def format_display_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
     display = df.copy()
     for column in display.columns:
-        if is_numeric_dtype(display[column]):
-            display[column] = display[column].map(
-                lambda value, column_name=str(column): format_number_for_display(
-                    value, column_name
-                )
+        display[column] = display[column].map(
+            lambda value, column_name=str(column): format_number_for_display(
+                value, column_name
             )
+        )
     return display
 
 
