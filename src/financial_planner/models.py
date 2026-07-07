@@ -207,6 +207,49 @@ class MonteCarloConfig(PlannerBaseModel):
     target_values: list[float] = Field(default_factory=list)
 
 
+class BucketConfig(PlannerBaseModel):
+    product: str | None = None
+    priority: PositiveInt = 1
+    target: float = Field(default=0.0, ge=0)
+    annual_budget: float = Field(default=0.0, ge=0)
+    annual_contribution: float = Field(default=0.0, ge=0)
+    annual_amount: float = Field(default=0.0, ge=0)
+
+
+class BucketsConfig(PlannerBaseModel):
+    emergency_fund: BucketConfig = Field(
+        default_factory=lambda: BucketConfig(
+            target=30_000,
+            product="remunerated_account",
+            priority=1,
+        )
+    )
+    travel_and_life: BucketConfig = Field(
+        default_factory=lambda: BucketConfig(
+            annual_budget=0,
+            product="remunerated_account",
+            priority=2,
+        )
+    )
+    home_improvements: BucketConfig = Field(
+        default_factory=lambda: BucketConfig(
+            annual_budget=0,
+            product="remunerated_account",
+            priority=2,
+        )
+    )
+    long_term_investment: BucketConfig = Field(
+        default_factory=lambda: BucketConfig(
+            annual_contribution=0,
+            product="global_investment_fund",
+            priority=3,
+        )
+    )
+    mortgage_extra_amortization: BucketConfig = Field(
+        default_factory=lambda: BucketConfig(annual_amount=0, priority=4)
+    )
+
+
 class ScenarioConfig(PlannerBaseModel):
     name: str
     annual_savings: float | None = Field(default=None, ge=0)
@@ -237,6 +280,8 @@ class PlanningConfig(PlannerBaseModel):
     monte_carlo: MonteCarloConfig = Field(default_factory=MonteCarloConfig)
     life_events: list[LifeEventConfig] = Field(default_factory=list)
     emergency_fund_blocks_investing: bool = True
+    retirement_target_real: float = Field(default=350_000, ge=0)
+    buckets: BucketsConfig = Field(default_factory=BucketsConfig)
 
 
 class ProductConfig(PlannerBaseModel):
@@ -317,6 +362,20 @@ class YearlyResult(PlannerBaseModel):
     total_contributions: float = 0
     investable_savings: float = 0
     life_event_expenses: float = 0
+    planned_spending_annual: float = 0
+    planned_spending_cumulative: float = 0
+    remaining_liquidity_after_spending: float = 0
+    retirement_wealth_after_life_spending: float = 0
+    target_success: bool = False
+    surplus_vs_target_real: float = 0
+    shortfall_vs_target_real: float = 0
+    recommended_available_life_spending: float = 0
+    emergency_fund_balance: float = 0
+    travel_life_bucket_balance: float = 0
+    home_improvement_bucket_balance: float = 0
+    long_term_investment_balance: float = 0
+    money_market_balance: float = 0
+    remunerated_account_balance: float = 0
     withdrawal: float = 0
     withdrawal_tax: float = 0
     extra_mortgage_amortization: float = 0

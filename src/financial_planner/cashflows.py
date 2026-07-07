@@ -13,6 +13,7 @@ class YearCashFlow:
     investable_savings: float
     liquidity: float
     life_event_expenses: float
+    planned_spending: float
     savings_multiplier: float
 
 
@@ -44,6 +45,10 @@ def cash_flow_for_year(
 
     savings = base_annual_savings(config)
     life_event_expenses = 0.0
+    bucket_planned_spending = (
+        config.planning.buckets.travel_and_life.annual_budget
+        + config.planning.buckets.home_improvements.annual_budget
+    )
     multiplier = 1.0
     for event in config.planning.life_events:
         if not event_applies(event, year):
@@ -53,11 +58,12 @@ def cash_flow_for_year(
         if year == event.start_year:
             life_event_expenses += event.one_off_expense
 
+    planned_spending = life_event_expenses + bucket_planned_spending
     available_savings = max(savings * multiplier, 0.0)
     liquidity = starting_liquidity
-    expense_from_liquidity = min(liquidity, life_event_expenses)
+    expense_from_liquidity = min(liquidity, planned_spending)
     liquidity -= expense_from_liquidity
-    remaining_expense = life_event_expenses - expense_from_liquidity
+    remaining_expense = planned_spending - expense_from_liquidity
     available_savings = max(available_savings - remaining_expense, 0.0)
 
     investable_savings = available_savings
@@ -72,5 +78,6 @@ def cash_flow_for_year(
         investable_savings=investable_savings,
         liquidity=liquidity,
         life_event_expenses=life_event_expenses,
+        planned_spending=planned_spending,
         savings_multiplier=multiplier,
     )

@@ -36,6 +36,10 @@ class AmortizeVsInvestDecision:
     difference: float
     preferred_option: str
     liquidity_warning: str | None
+    liquidity_impact: str
+    risk_level: str
+    break_even_return_needed: float
+    interpretation: str
 
 
 def final_net_wealth_for_strategy(
@@ -150,6 +154,26 @@ def amortize_vs_invest_decision(config: SimulationConfig) -> AmortizeVsInvestDec
             "Current liquidity is below target before allocating extra savings."
         )
 
+    liquidity_impact = (
+        "Reduce la liquidez disponible si se usa ahorro extra para amortizar deuda."
+    )
+    risk_level = "La amortizacion es menor riesgo; invertir tiene riesgo de mercado."
+    break_even_return_needed = config.mortgage.annual_interest_rate / max(
+        1 - 0.19, 0.01
+    )
+    if difference > 0:
+        interpretation = (
+            "Invertir tiene mayor valor esperado bajo estos supuestos, pero amortizar "
+            "es menor riesgo, reduce deuda y ofrece un ahorro garantizado igual al "
+            "interes hipotecario evitado. Una estrategia mixta puede ser mas realista."
+        )
+    else:
+        interpretation = (
+            "Amortizar tiene mayor valor esperado bajo estos supuestos y reduce deuda. "
+            "Invertir mantiene mas liquidez y potencial de rentabilidad, pero asume "
+            "riesgo de mercado. Una estrategia mixta puede ser mas realista."
+        )
+
     return AmortizeVsInvestDecision(
         annual_extra_amortization=annual_extra,
         mortgage_interest_saved=mortgage_interest_saved,
@@ -157,4 +181,8 @@ def amortize_vs_invest_decision(config: SimulationConfig) -> AmortizeVsInvestDec
         difference=difference,
         preferred_option=preferred,
         liquidity_warning=liquidity_warning,
+        liquidity_impact=liquidity_impact,
+        risk_level=risk_level,
+        break_even_return_needed=break_even_return_needed,
+        interpretation=interpretation,
     )

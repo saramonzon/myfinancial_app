@@ -12,6 +12,7 @@ from financial_planner.localization import (
     translate_value,
 )
 from financial_planner.models import SimulationConfig, StrategyResult
+from financial_planner.presentation import DEFAULT_DASHBOARD_COLUMNS
 from financial_planner.reporting import build_report_bundle
 from financial_planner.simulation import results_to_dataframe
 
@@ -79,41 +80,25 @@ def export_results_to_excel(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     bundle = build_report_bundle(config)
     yearly = results_to_dataframe(results)
-    final = yearly.sort_values("year").groupby("strategy", as_index=False).tail(1)
     with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
+        bundle.dashboard[DEFAULT_DASHBOARD_COLUMNS].to_excel(
+            writer, index=False, sheet_name="Dashboard"
+        )
         localize_dataframe(yearly).to_excel(
-            writer, index=False, sheet_name="resultados_anuales"
+            writer, index=False, sheet_name="Full results"
         )
-        localize_dataframe(final).to_excel(
-            writer, index=False, sheet_name="comparacion_final"
-        )
-        localize_dataframe(bundle.scenario_summary).to_excel(
-            writer, index=False, sheet_name="escenarios"
-        )
-        localize_dataframe(bundle.scenario_templates).to_excel(
-            writer, index=False, sheet_name="plantillas_escenario"
-        )
-        localize_dataframe(bundle.sensitivity).to_excel(
-            writer, index=False, sheet_name="sensibilidad"
-        )
-        localize_dataframe(bundle.sanity_check).to_excel(
-            writer, index=False, sheet_name="comprobacion"
-        )
-        localize_dataframe(bundle.monte_carlo).to_excel(
-            writer, index=False, sheet_name="monte_carlo"
-        )
-        localize_dataframe(bundle.product_comparison).to_excel(
-            writer, index=False, sheet_name="productos"
-        )
-        localize_dataframe(bundle.decision_summary).to_excel(
-            writer, index=False, sheet_name="decisiones"
-        )
-        localize_dataframe(bundle.warnings_table).to_excel(
-            writer, index=False, sheet_name="avisos"
-        )
-        localize_dataframe(config_summary_dataframe(config)).to_excel(
-            writer, index=False, sheet_name="supuestos"
-        )
+        bundle.glossary.to_excel(writer, index=False, sheet_name="Glossary")
+        bundle.bucket_plan.to_excel(writer, index=False, sheet_name="Bucket plan")
+        bundle.mortgage_vs_invest.to_excel(writer, index=False, sheet_name="Mortgage vs invest")
+        bundle.scenario_summary.to_excel(writer, index=False, sheet_name="Scenarios")
+        bundle.scenario_templates.to_excel(writer, index=False, sheet_name="Scenario templates")
+        bundle.monte_carlo.to_excel(writer, index=False, sheet_name="Monte Carlo")
+        localize_dataframe(bundle.sensitivity).to_excel(writer, index=False, sheet_name="Sensitivity")
+        localize_dataframe(bundle.sanity_check).to_excel(writer, index=False, sheet_name="Sanity check")
+        localize_dataframe(bundle.product_comparison).to_excel(writer, index=False, sheet_name="Products")
+        localize_dataframe(bundle.decision_summary).to_excel(writer, index=False, sheet_name="Decisions")
+        localize_dataframe(bundle.warnings_table).to_excel(writer, index=False, sheet_name="Warnings")
+        localize_dataframe(config_summary_dataframe(config)).to_excel(writer, index=False, sheet_name="Assumptions")
     return output_path
 
 
@@ -127,27 +112,34 @@ def export_results_to_markdown(
     output_path = Path(path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     bundle = build_report_bundle(config)
-    yearly = results_to_dataframe(results)
-    final = yearly.sort_values("year").groupby("strategy", as_index=False).tail(1)
-    comparison_columns = [
-        "strategy",
-        "year",
-        "net_wealth",
-        "real_net_wealth",
-        "gross_wealth",
-        "taxes_paid",
-        "fees_paid",
-        "mortgage_balance",
-        "liquidity_gap",
-    ]
     lines = [
         "# Informe de planificación financiera",
         "",
         "Modelo simplificado de planificación. No es asesoramiento financiero, fiscal ni legal.",
         "",
-        "## Comparación final",
+        "## Como leer la tabla",
         "",
-        dataframe_to_markdown(localize_display_dataframe(final[comparison_columns])),
+        "- El patrimonio bruto es antes de deducciones.",
+        "- El neto tras impuestos y comisiones es mas cercano al dinero liquidable.",
+        "- El patrimonio neto real convierte euros futuros a poder adquisitivo actual.",
+        "- El total aportado es ahorro propio.",
+        "- La ganancia neta es rentabilidad estimada despues de impuestos y comisiones.",
+        "- Los euros nominales futuros pueden parecer mucho mayores que su valor real.",
+        "- El modelo es una herramienta de planificacion, no una prevision.",
+        "",
+        "## Dashboard",
+        "",
+        dataframe_to_markdown(
+            localize_display_dataframe(bundle.dashboard[DEFAULT_DASHBOARD_COLUMNS])
+        ),
+        "",
+        "## Hipoteca vs inversion",
+        "",
+        dataframe_to_markdown(localize_display_dataframe(bundle.mortgage_vs_invest)),
+        "",
+        "## Plan por cubos",
+        "",
+        dataframe_to_markdown(localize_display_dataframe(bundle.bucket_plan)),
         "",
         "## Ayudantes de decisión",
         "",

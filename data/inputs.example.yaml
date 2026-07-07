@@ -72,6 +72,27 @@ strategies:
     - mixed_allocation
 
 planning:
+  retirement_target_real: 350000
+  buckets:
+    emergency_fund:
+      target: 30000
+      product: remunerated_account
+      priority: 1
+    travel_and_life:
+      annual_budget: 3000
+      product: remunerated_account
+      priority: 2
+    home_improvements:
+      annual_budget: 3000
+      product: money_market_fund
+      priority: 2
+    long_term_investment:
+      annual_contribution: 7000
+      product: global_investment_fund
+      priority: 3
+    mortgage_extra_amortization:
+      annual_amount: 3000
+      priority: 4
   withdrawals:
     annual_amount: 0
     start_year:

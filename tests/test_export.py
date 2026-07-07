@@ -15,7 +15,10 @@ def test_markdown_export_contains_final_comparison(tmp_path) -> None:
 
     text = path.read_text(encoding="utf-8")
     assert "# Informe de planificación financiera" in text
-    assert "Comparación final" in text
+    assert "Como leer la tabla" in text
+    assert "Dashboard" in text
+    assert "Hipoteca vs inversion" in text
+    assert "Plan por cubos" in text
     assert "Ayudantes de decisión" in text
     assert "Resumen de escenarios" in text
     assert "Comprobación de coherencia" in text
@@ -33,15 +36,12 @@ def test_excel_export_contains_v1_sheets(tmp_path) -> None:
     workbook = load_workbook(path, read_only=True)
 
     assert {
-        "resultados_anuales",
-        "comparacion_final",
-        "escenarios",
-        "plantillas_escenario",
-        "sensibilidad",
-        "comprobacion",
-        "monte_carlo",
-        "productos",
-        "decisiones",
-        "avisos",
-        "supuestos",
+        "Dashboard",
+        "Full results",
+        "Glossary",
+        "Bucket plan",
+        "Mortgage vs invest",
+        "Scenarios",
+        "Monte Carlo",
+        "Assumptions",
     }.issubset(set(workbook.sheetnames))

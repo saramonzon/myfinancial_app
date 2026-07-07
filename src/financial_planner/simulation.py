@@ -27,6 +27,50 @@ from financial_planner.taxes import (
 )
 
 
+def retirement_target_metrics(
+    real_net_wealth: float, retirement_target_real: float
+) -> dict[str, bool | float]:
+    """Return surplus/shortfall metrics against the configured real retirement target."""
+
+    surplus = max(real_net_wealth - retirement_target_real, 0.0)
+    shortfall = max(retirement_target_real - real_net_wealth, 0.0)
+    return {
+        "target_success": shortfall == 0,
+        "surplus_vs_target_real": surplus,
+        "shortfall_vs_target_real": shortfall,
+        "recommended_available_life_spending": surplus,
+    }
+
+
+def yearly_presentation_metrics(
+    config: SimulationConfig,
+    real_net_wealth: float,
+    liquidity: float,
+    planned_spending_annual: float,
+    planned_spending_cumulative: float,
+    investment_balance: float = 0.0,
+) -> dict[str, bool | float]:
+    """Return auditable presentation fields derived from yearly simulation state."""
+
+    return {
+        "planned_spending_annual": planned_spending_annual,
+        "planned_spending_cumulative": planned_spending_cumulative,
+        "remaining_liquidity_after_spending": liquidity,
+        "retirement_wealth_after_life_spending": real_net_wealth,
+        "emergency_fund_balance": min(
+            liquidity, config.planning.buckets.emergency_fund.target
+        ),
+        "travel_life_bucket_balance": 0.0,
+        "home_improvement_bucket_balance": 0.0,
+        "long_term_investment_balance": investment_balance,
+        "money_market_balance": 0.0,
+        "remunerated_account_balance": liquidity,
+        **retirement_target_metrics(
+            real_net_wealth, config.planning.retirement_target_real
+        ),
+    }
+
+
 def simulation_years(config: SimulationConfig) -> int:
     """Return number of years until the oldest configured person reaches retirement."""
 
@@ -163,6 +207,7 @@ def _simulate_product_strategy(
     total_taxes = 0.0
     total_fees = 0.0
     total_contributions = 0.0
+    planned_spending_cumulative = 0.0
     liquidity = config.household.current_liquidity
     rows: list[YearlyResult] = []
 
@@ -170,6 +215,7 @@ def _simulate_product_strategy(
         year = config.household.current_year + offset
         cash_flow = cash_flow_for_year(config, year, liquidity)
         liquidity = cash_flow.liquidity
+        planned_spending_cumulative += cash_flow.planned_spending
         grown = grow_one_year(
             balance, cash_flow.investable_savings, product, cost_basis
         )
@@ -195,6 +241,7 @@ def _simulate_product_strategy(
         net_wealth = selected_net_wealth(
             config, net_liquidable_wealth, home_equity_value
         )
+        real_net = real_value(net_wealth, config.assumptions.inflation, offset + 1)
         rows.append(
             YearlyResult(
                 strategy=strategy,
@@ -203,9 +250,7 @@ def _simulate_product_strategy(
                 gross_wealth=balance,
                 net_wealth=net_wealth,
                 net_liquidable_wealth=net_liquidable_wealth,
-                real_net_wealth=real_value(
-                    net_wealth, config.assumptions.inflation, offset + 1
-                ),
+                real_net_wealth=real_net,
                 taxes_paid=total_taxes,
                 latent_taxes=liquidation_tax_due,
                 fees_paid=total_fees,
@@ -226,6 +271,14 @@ def _simulate_product_strategy(
                 total_contributions=total_contributions,
                 investable_savings=cash_flow.investable_savings,
                 life_event_expenses=cash_flow.life_event_expenses,
+                **yearly_presentation_metrics(
+                    config=config,
+                    real_net_wealth=real_net,
+                    liquidity=liquidity,
+                    planned_spending_annual=cash_flow.planned_spending,
+                    planned_spending_cumulative=planned_spending_cumulative,
+                    investment_balance=balance if product.type != "unit_linked" else 0.0,
+                ),
                 withdrawal=withdrawal_result.withdrawal,
                 withdrawal_tax=withdrawal_result.tax,
                 assumptions=_base_assumptions(config, product),
@@ -258,6 +311,7 @@ def simulate_pension_plan_reinvest_tax_saving(
     fund_cost_basis = 0.0
     total_fees = 0.0
     total_contributions = 0.0
+    planned_spending_cumulative = 0.0
     liquidity = config.household.current_liquidity
     rows: list[YearlyResult] = []
 
@@ -265,6 +319,7 @@ def simulate_pension_plan_reinvest_tax_saving(
         year = config.household.current_year + offset
         cash_flow = cash_flow_for_year(config, year, liquidity)
         liquidity = cash_flow.liquidity
+        planned_spending_cumulative += cash_flow.planned_spending
         pension_contribution = min(cash_flow.investable_savings, annual_pension_limit)
         tax_saving = pension_contribution_tax_saving(
             pension_contribution, current_tax_rate
@@ -309,6 +364,7 @@ def simulate_pension_plan_reinvest_tax_saving(
         net_wealth = selected_net_wealth(
             config, net_liquidable_wealth, home_equity_value
         )
+        real_net = real_value(net_wealth, config.assumptions.inflation, offset + 1)
 
         rows.append(
             YearlyResult(
@@ -318,9 +374,7 @@ def simulate_pension_plan_reinvest_tax_saving(
                 gross_wealth=pension_balance + fund_balance,
                 net_wealth=net_wealth,
                 net_liquidable_wealth=net_liquidable_wealth,
-                real_net_wealth=real_value(
-                    net_wealth, config.assumptions.inflation, offset + 1
-                ),
+                real_net_wealth=real_net,
                 taxes_paid=taxes_paid,
                 latent_taxes=fund_tax_due + pension_tax_due,
                 fees_paid=total_fees,
@@ -341,6 +395,14 @@ def simulate_pension_plan_reinvest_tax_saving(
                 total_contributions=total_contributions,
                 investable_savings=cash_flow.investable_savings,
                 life_event_expenses=cash_flow.life_event_expenses,
+                **yearly_presentation_metrics(
+                    config=config,
+                    real_net_wealth=real_net,
+                    liquidity=liquidity,
+                    planned_spending_annual=cash_flow.planned_spending,
+                    planned_spending_cumulative=planned_spending_cumulative,
+                    investment_balance=fund_balance,
+                ),
                 withdrawal=withdrawal_result.withdrawal,
                 withdrawal_tax=withdrawal_result.tax,
                 assumptions={
@@ -366,10 +428,12 @@ def simulate_mortgage_amortization(config: SimulationConfig) -> StrategyResult:
     rows: list[YearlyResult] = []
     liquidity = config.household.current_liquidity
     total_contributions = 0.0
+    planned_spending_cumulative = 0.0
     for offset, mortgage_balance in enumerate(balances):
         year = config.household.current_year + offset
         cash_flow = cash_flow_for_year(config, year, liquidity)
         liquidity = cash_flow.liquidity
+        planned_spending_cumulative += cash_flow.planned_spending
         extra_for_year = min(cash_flow.investable_savings, mortgage_balance)
         total_contributions += extra_for_year
         net_liquidable_wealth = liquidity - mortgage_balance
@@ -377,6 +441,7 @@ def simulate_mortgage_amortization(config: SimulationConfig) -> StrategyResult:
         net_wealth = selected_net_wealth(
             config, net_liquidable_wealth, home_equity_value
         )
+        real_net = real_value(net_wealth, config.assumptions.inflation, offset + 1)
         rows.append(
             YearlyResult(
                 strategy="mortgage_amortization",
@@ -385,9 +450,7 @@ def simulate_mortgage_amortization(config: SimulationConfig) -> StrategyResult:
                 gross_wealth=0.0,
                 net_wealth=net_wealth,
                 net_liquidable_wealth=net_liquidable_wealth,
-                real_net_wealth=real_value(
-                    net_wealth, config.assumptions.inflation, offset + 1
-                ),
+                real_net_wealth=real_net,
                 taxes_paid=0.0,
                 latent_taxes=0.0,
                 fees_paid=0.0,
@@ -406,6 +469,13 @@ def simulate_mortgage_amortization(config: SimulationConfig) -> StrategyResult:
                 total_contributions=total_contributions,
                 investable_savings=cash_flow.investable_savings,
                 life_event_expenses=cash_flow.life_event_expenses,
+                **yearly_presentation_metrics(
+                    config=config,
+                    real_net_wealth=real_net,
+                    liquidity=liquidity,
+                    planned_spending_annual=cash_flow.planned_spending,
+                    planned_spending_cumulative=planned_spending_cumulative,
+                ),
                 extra_mortgage_amortization=extra_for_year,
                 assumptions={
                     **_base_assumptions(config),
@@ -436,6 +506,7 @@ def simulate_mixed_allocation(config: SimulationConfig) -> StrategyResult:
     unit_cost_basis = 0.0
     total_fees = 0.0
     total_contributions = 0.0
+    planned_spending_cumulative = 0.0
     liquidity = config.household.current_liquidity
     rows: list[YearlyResult] = []
 
@@ -443,6 +514,7 @@ def simulate_mixed_allocation(config: SimulationConfig) -> StrategyResult:
         year = config.household.current_year + offset
         cash_flow = cash_flow_for_year(config, year, liquidity)
         liquidity = cash_flow.liquidity
+        planned_spending_cumulative += cash_flow.planned_spending
         fund_contribution = cash_flow.investable_savings * allocation.investment_fund
         mortgage_contribution = (
             cash_flow.investable_savings * allocation.mortgage_amortization
@@ -515,6 +587,7 @@ def simulate_mixed_allocation(config: SimulationConfig) -> StrategyResult:
         net_wealth = selected_net_wealth(
             config, net_liquidable_wealth, home_equity_value
         )
+        real_net = real_value(net_wealth, config.assumptions.inflation, offset + 1)
 
         rows.append(
             YearlyResult(
@@ -524,9 +597,7 @@ def simulate_mixed_allocation(config: SimulationConfig) -> StrategyResult:
                 gross_wealth=fund_balance + pension_balance + unit_balance,
                 net_wealth=net_wealth,
                 net_liquidable_wealth=net_liquidable_wealth,
-                real_net_wealth=real_value(
-                    net_wealth, config.assumptions.inflation, offset + 1
-                ),
+                real_net_wealth=real_net,
                 taxes_paid=fund_tax_due
                 + unit_tax_due
                 + pension_tax_due
@@ -553,6 +624,14 @@ def simulate_mixed_allocation(config: SimulationConfig) -> StrategyResult:
                 total_contributions=total_contributions,
                 investable_savings=cash_flow.investable_savings,
                 life_event_expenses=cash_flow.life_event_expenses,
+                **yearly_presentation_metrics(
+                    config=config,
+                    real_net_wealth=real_net,
+                    liquidity=liquidity,
+                    planned_spending_annual=cash_flow.planned_spending,
+                    planned_spending_cumulative=planned_spending_cumulative,
+                    investment_balance=fund_balance,
+                ),
                 withdrawal=fund_withdrawal.withdrawal + unit_withdrawal.withdrawal,
                 withdrawal_tax=withdrawal_tax,
                 extra_mortgage_amortization=mortgage_contribution

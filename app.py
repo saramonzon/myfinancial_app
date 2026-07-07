@@ -19,10 +19,17 @@ from financial_planner.charts import (
 from financial_planner.config import load_config
 from financial_planner.export import export_results_to_excel, export_results_to_markdown
 from financial_planner.localization import (
+    format_display_dataframe,
     format_number_for_display,
     localize_display_dataframe,
     metric_label,
     translate_value,
+)
+from financial_planner.presentation import (
+    ADVANCED_DASHBOARD_COLUMNS,
+    COLUMN_DEFINITIONS,
+    DEFAULT_DASHBOARD_COLUMNS,
+    dashboard_kpis,
 )
 from financial_planner.products import generic_product_templates
 from financial_planner.reporting import build_report_bundle
@@ -31,6 +38,7 @@ DEFAULT_INPUTS = Path("data/inputs.example.yaml")
 DEFAULT_PRODUCTS = Path("data/products.example.yaml")
 DEFAULT_EXCEL_EXPORT = Path("outputs/resultados_v1_0.xlsx")
 DEFAULT_MARKDOWN_EXPORT = Path("outputs/informe_v1_0.md")
+APP_SCHEMA_VERSION = "dashboard_v2"
 
 
 st.set_page_config(page_title="Planificador financiero", layout="wide")
@@ -54,9 +62,14 @@ required_state_keys = {
     "product_comparison_df",
     "break_even",
     "amortize_vs_invest",
+    "app_schema_version",
 }
 
-if run_button or not required_state_keys.issubset(st.session_state.keys()):
+if (
+    run_button
+    or not required_state_keys.issubset(st.session_state.keys())
+    or st.session_state.get("app_schema_version") != APP_SCHEMA_VERSION
+):
     try:
         config = load_config(inputs_path, products_path)
         bundle = build_report_bundle(config)
@@ -70,6 +83,7 @@ if run_button or not required_state_keys.issubset(st.session_state.keys()):
         st.session_state["product_comparison_df"] = bundle.product_comparison
         st.session_state["break_even"] = bundle.break_even
         st.session_state["amortize_vs_invest"] = bundle.amortize_vs_invest
+        st.session_state["app_schema_version"] = APP_SCHEMA_VERSION
     except (
         Exception
     ) as exc:  # pragma: no cover - Streamlit displays the validation detail.
@@ -112,6 +126,17 @@ with st.sidebar:
         options=metric_options,
         format_func=metric_label,
     )
+    show_advanced_columns = st.toggle("Mostrar columnas avanzadas", value=False)
+    available_dashboard_columns = DEFAULT_DASHBOARD_COLUMNS + ADVANCED_DASHBOARD_COLUMNS
+    default_dashboard_columns = (
+        available_dashboard_columns if show_advanced_columns else DEFAULT_DASHBOARD_COLUMNS
+    )
+    selected_dashboard_columns = st.multiselect(
+        "Columnas de la tabla principal",
+        options=available_dashboard_columns,
+        default=default_dashboard_columns,
+        format_func=lambda column: COLUMN_DEFINITIONS[column].ui_label_es,
+    )
 
 filtered_df = results_df.loc[
     (results_df["strategy"].isin(selected_strategies))
@@ -142,24 +167,88 @@ with overview_tab:
     final_rows = (
         filtered_df.sort_values("year").groupby("strategy", as_index=False).tail(1)
     )
+    dashboard_rows = bundle.dashboard.loc[
+        bundle.dashboard["strategy"].isin(final_rows["strategy"])
+    ]
+    selected_dashboard_columns = [
+        column for column in selected_dashboard_columns if column in dashboard_rows.columns
+    ]
+    st.info(
+        "Como leer esta tabla: patrimonio bruto es antes de deducciones; neto tras "
+        "impuestos y comisiones es mas cercano al dinero liquidable; patrimonio neto "
+        "real convierte euros futuros a euros de hoy; total aportado es ahorro propio; "
+        "ganancia neta separa crecimiento estimado de aportaciones; los euros nominales "
+        "futuros pueden parecer mucho mayores que su valor real; esto es una herramienta "
+        "de planificacion, no una prevision."
+    )
+    kpis = dashboard_kpis(dashboard_rows)
+    kpi_columns = st.columns(4)
+    kpi_columns[0].metric(
+        "Mejor patrimonio real",
+        format_number_for_display(kpis.get("best_real_net_wealth", 0.0)),
+        help="Mejor patrimonio neto convertido a euros de hoy.",
+    )
+    kpi_columns[1].metric(
+        "Mejor neto liquidable",
+        format_number_for_display(kpis.get("best_net_after_taxes_fees", 0.0)),
+        help="Mejor valor neto tras impuestos, comisiones y deuda.",
+    )
+    kpi_columns[2].metric(
+        "Menores comisiones",
+        format_number_for_display(kpis.get("lowest_fees", 0.0)),
+        help="Menor coste acumulado entre estrategias filtradas.",
+    )
+    kpi_columns[3].metric(
+        "Menor hipoteca",
+        format_number_for_display(kpis.get("lowest_mortgage_balance", 0.0)),
+        help="Menor saldo hipotecario final.",
+    )
+    kpi_columns = st.columns(3)
+    kpi_columns[0].metric(
+        "Menores impuestos",
+        format_number_for_display(kpis.get("lowest_taxes", 0.0)),
+        help="Menor estimacion de impuestos pagados o latentes.",
+    )
+    kpi_columns[1].metric(
+        "Mayor gasto vital",
+        format_number_for_display(kpis.get("highest_planned_life_spending", 0.0)),
+        help="Mayor gasto planificado acumulado en vida, viajes y reformas.",
+    )
+    kpi_columns[2].metric(
+        "Superavit/deficit objetivo",
+        format_number_for_display(kpis.get("retirement_target_surplus_shortfall", 0.0)),
+        help="Resumen frente al objetivo real de jubilacion configurado.",
+    )
+    if (
+        dashboard_rows["gross_wealth_nominal"].max()
+        > dashboard_rows["real_net_wealth_today_euros"].max() * 1.4
+    ):
+        st.warning(
+            "Los euros nominales futuros no equivalen al poder adquisitivo actual. "
+            "Revisa la columna de patrimonio neto real para entender el valor en euros de hoy."
+        )
+    if (
+        dashboard_rows["total_contributions"].max()
+        > dashboard_rows["net_wealth_after_taxes_fees"].max() * 0.5
+    ):
+        st.info(
+            "Una parte significativa del importe final viene del ahorro anual propio, "
+            "no solo de la rentabilidad de la inversion."
+        )
+    column_config = {
+        column: st.column_config.TextColumn(
+            COLUMN_DEFINITIONS[column].ui_label_es,
+            help=(
+                f"{COLUMN_DEFINITIONS[column].definition_es} "
+                f"{COLUMN_DEFINITIONS[column].interpretation_es}"
+            ),
+        )
+        for column in selected_dashboard_columns
+    }
     st.dataframe(
-        localize_display_dataframe(
-            final_rows[
-                [
-                    "strategy",
-                    "year",
-                    "net_wealth",
-                    "real_net_wealth",
-                    "gross_wealth",
-                    "taxes_paid",
-                    "fees_paid",
-                    "mortgage_balance",
-                    "liquidity",
-                    "liquidity_gap",
-                ]
-            ]
-        ),
+        format_display_dataframe(dashboard_rows[selected_dashboard_columns]),
         width="stretch",
+        column_config=column_config,
     )
     chart_left, chart_right = st.columns(2)
     chart_left.plotly_chart(
@@ -216,11 +305,11 @@ with decision_tab:
         "Diferencia amortizar vs invertir",
         format_number_for_display(amortize_vs_invest.difference),
     )
-    decision_right.caption(
-        f"Opción preferida por los supuestos: {translate_value(amortize_vs_invest.preferred_option)}"
-    )
+    decision_right.caption(amortize_vs_invest.interpretation)
     if amortize_vs_invest.liquidity_warning:
         st.warning("La liquidez actual está por debajo del objetivo antes de asignar ahorro extra.")
+    st.subheader("Hipoteca vs inversión")
+    st.dataframe(localize_display_dataframe(bundle.mortgage_vs_invest), width="stretch")
     st.dataframe(localize_display_dataframe(bundle.decision_summary), width="stretch")
 
 with scenario_tab:
@@ -243,6 +332,8 @@ with scenario_tab:
     )
 
 with product_tab:
+    st.subheader("Plan por cubos")
+    st.dataframe(localize_display_dataframe(bundle.bucket_plan), width="stretch")
     st.subheader("Comparación de productos")
     st.dataframe(localize_display_dataframe(product_comparison_df), width="stretch")
     st.subheader("Plantillas de producto")

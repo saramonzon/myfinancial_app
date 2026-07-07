@@ -14,6 +14,11 @@ from financial_planner.decision import (
 )
 from financial_planner.models import SimulationConfig, StrategyResult
 from financial_planner.monte_carlo import monte_carlo_summary
+from financial_planner.presentation import (
+    bucket_plan_dataframe,
+    dashboard_dataframe,
+    glossary_dataframe,
+)
 from financial_planner.products import product_comparison_dataframe
 from financial_planner.scenarios import run_scenarios, scenario_templates
 from financial_planner.sensitivity import commission_return_sensitivity
@@ -41,6 +46,10 @@ class ReportBundle:
     sanity_check: pd.DataFrame
     monte_carlo: pd.DataFrame
     scenario_templates: pd.DataFrame
+    dashboard: pd.DataFrame
+    glossary: pd.DataFrame
+    bucket_plan: pd.DataFrame
+    mortgage_vs_invest: pd.DataFrame
 
 
 def final_results_dataframe(yearly: pd.DataFrame) -> pd.DataFrame:
@@ -124,6 +133,35 @@ def decision_summary_dataframe(
                 "value": amortize_vs_invest.difference,
                 "detail": f"preferred={amortize_vs_invest.preferred_option}",
             },
+            {
+                "helper": "amortize_vs_invest",
+                "metric": "break_even_return_needed",
+                "value": amortize_vs_invest.break_even_return_needed,
+                "detail": amortize_vs_invest.interpretation,
+            },
+        ]
+    )
+
+
+def mortgage_vs_invest_dataframe(
+    amortize_vs_invest: AmortizeVsInvestDecision,
+) -> pd.DataFrame:
+    """Return a simple user-facing mortgage amortization vs investing card."""
+
+    return pd.DataFrame(
+        [
+            {
+                "extra_mortgage_amortized": amortize_vs_invest.annual_extra_amortization,
+                "mortgage_interest_saved": amortize_vs_invest.mortgage_interest_saved,
+                "expected_after_tax_investment_gain": (
+                    amortize_vs_invest.expected_after_tax_investment_gain
+                ),
+                "difference": amortize_vs_invest.difference,
+                "liquidity_impact": amortize_vs_invest.liquidity_impact,
+                "risk_level": amortize_vs_invest.risk_level,
+                "break_even_return_needed": amortize_vs_invest.break_even_return_needed,
+                "interpretation": amortize_vs_invest.interpretation,
+            }
         ]
     )
 
@@ -194,6 +232,7 @@ def build_report_bundle(config: SimulationConfig) -> ReportBundle:
     break_even = break_even_commission(config)
     amortize_vs_invest = amortize_vs_invest_decision(config)
     sanity_check = sanity_check_dataframe(config, final)
+    amortize_vs_invest_table = mortgage_vs_invest_dataframe(amortize_vs_invest)
     return ReportBundle(
         config=config,
         results=results,
@@ -211,4 +250,8 @@ def build_report_bundle(config: SimulationConfig) -> ReportBundle:
         sanity_check=sanity_check,
         monte_carlo=monte_carlo_summary(config),
         scenario_templates=scenario_template_summary_dataframe(config),
+        dashboard=dashboard_dataframe(final, config),
+        glossary=glossary_dataframe(),
+        bucket_plan=bucket_plan_dataframe(config),
+        mortgage_vs_invest=amortize_vs_invest_table,
     )
