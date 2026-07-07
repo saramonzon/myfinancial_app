@@ -13,17 +13,17 @@ household:
 people:
   - name: Person A
     age: 37
-    gross_salary: 46341
+    gross_salary: 40000
     current_marginal_tax_rate: 0.37
     expected_future_marginal_tax_rate: 0.30
   - name: Person B
     age: 39
-    gross_salary: 37547
+    gross_salary: 30000
     current_marginal_tax_rate: 0.30
     expected_future_marginal_tax_rate: 0.30
 
 mortgage:
-  initial_principal: 281000
+  initial_principal: 181000
   annual_interest_rate: 0.0215
   term_years: 30
   annual_extra_amortization: 4800
@@ -72,7 +72,7 @@ strategies:
     - mixed_allocation
 
 planning:
-  retirement_target_real: 350000
+  retirement_target_real: 200000
   buckets:
     emergency_fund:
       target: 30000
@@ -83,11 +83,11 @@ planning:
       product: remunerated_account
       priority: 2
     home_improvements:
-      annual_budget: 3000
+      annual_budget: 5000
       product: money_market_fund
       priority: 2
     long_term_investment:
-      annual_contribution: 7000
+      annual_contribution: 5000
       product: global_investment_fund
       priority: 3
     mortgage_extra_amortization:
@@ -100,7 +100,7 @@ planning:
   mixed_allocation:
     investment_fund: 0.40
     pension_plan: 0.20
-    unit_linked: 0.20
+    unit_linked: 0
     mortgage_amortization: 0.20
   sensitivity:
     product_type: investment_fund
