@@ -36,9 +36,13 @@ class ProductTemplate:
     name: str
     description: str
     default_expected_return: float
+    default_volatility: float
     default_annual_commission: float
     tax_treatment: str
     liquidity: str
+    default_annual_contribution_limit_per_person: float | None = None
+    default_insurance_cost: float = 0.0
+    notes: str = "Generic template. Replace assumptions before using."
 
 
 def find_product(
@@ -155,6 +159,7 @@ def generic_product_templates() -> list[ProductTemplate]:
             name="Remunerated account template",
             description="Liquid cash-like product with annual interest taxed as savings income.",
             default_expected_return=0.02,
+            default_volatility=0.005,
             default_annual_commission=0.0,
             tax_treatment="savings_income",
             liquidity="immediate",
@@ -164,6 +169,7 @@ def generic_product_templates() -> list[ProductTemplate]:
             name="Money market fund template",
             description="Low-volatility fund with deferred savings taxation on gains.",
             default_expected_return=0.025,
+            default_volatility=0.01,
             default_annual_commission=0.002,
             tax_treatment="savings_income_deferred",
             liquidity="high",
@@ -173,6 +179,7 @@ def generic_product_templates() -> list[ProductTemplate]:
             name="Investment fund template",
             description="Market-risk fund with deferred savings taxation on gains.",
             default_expected_return=0.05,
+            default_volatility=0.15,
             default_annual_commission=0.005,
             tax_treatment="savings_income_deferred",
             liquidity="high",
@@ -182,18 +189,22 @@ def generic_product_templates() -> list[ProductTemplate]:
             name="Pension plan template",
             description="Restricted-liquidity product with contribution deduction and general-income redemption.",
             default_expected_return=0.05,
+            default_volatility=0.15,
             default_annual_commission=0.008,
             tax_treatment="general_income_on_redemption",
             liquidity="restricted",
+            default_annual_contribution_limit_per_person=1_500,
         ),
         ProductTemplate(
             product_type="unit_linked",
             name="Unit linked template",
             description="Insurance wrapper with savings taxation on gains and configurable insurance cost.",
             default_expected_return=0.05,
+            default_volatility=0.16,
             default_annual_commission=0.015,
             tax_treatment="savings_income",
             liquidity="medium_high",
+            default_insurance_cost=0.0,
         ),
     ]
 
@@ -209,12 +220,17 @@ def product_comparison_dataframe(products: list[ProductConfig]) -> pd.DataFrame:
                 "name": product.name,
                 "type": product.type,
                 "expected_return": product.expected_return,
+                "volatility": product.volatility,
                 "annual_commission": product.annual_commission,
+                "annual_contribution_limit_per_person": (
+                    product.annual_contribution_limit_per_person
+                ),
                 "insurance_cost": product.insurance_cost,
                 "total_annual_cost": total_fee,
                 "simple_net_return_before_tax": product.expected_return - total_fee,
                 "tax_treatment": product.tax_treatment,
                 "liquidity": product.liquidity,
+                "notes": product.notes or "",
             }
         )
     return pd.DataFrame(rows)

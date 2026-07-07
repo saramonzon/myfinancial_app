@@ -1,6 +1,9 @@
 """Tests for generic product formulas."""
 
+from pathlib import Path
+
 import pytest
+import yaml
 
 from financial_planner.models import ProductConfig
 from financial_planner.models import TaxConfig
@@ -65,6 +68,22 @@ def test_generic_product_templates_cover_supported_families() -> None:
         "pension_plan",
         "unit_linked",
     }
+    assert all(template.default_volatility >= 0 for template in templates)
+    assert all(template.notes for template in templates)
+    assert any(
+        template.default_annual_contribution_limit_per_person == 1_500
+        for template in templates
+        if template.product_type == "pension_plan"
+    )
+
+
+def test_product_template_yaml_exposes_product_config_fields() -> None:
+    templates_path = Path("data/product_templates.yaml")
+    data = yaml.safe_load(templates_path.read_text(encoding="utf-8"))
+    template_fields = [set(template) for template in data["templates"]]
+    expected_fields = set(ProductConfig.model_fields)
+
+    assert all(expected_fields.issubset(fields) for fields in template_fields)
 
 
 def test_product_comparison_dataframe_includes_cost_drag() -> None:
@@ -82,3 +101,4 @@ def test_product_comparison_dataframe_includes_cost_drag() -> None:
 
     assert df["total_annual_cost"].iloc[0] == pytest.approx(0.017)
     assert df["simple_net_return_before_tax"].iloc[0] == pytest.approx(0.033)
+    assert "volatility" in df.columns
