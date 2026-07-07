@@ -4,6 +4,11 @@ household:
   annual_savings: 16800
   current_liquidity: 10000
   target_liquidity: 30000
+  derive_savings_from_income: false
+  annual_expenses:
+  effective_income_tax_rate: 0.0
+  home_value: 0
+  include_home_equity_in_net_wealth: false
 
 people:
   - name: Person A
@@ -40,8 +45,10 @@ tax:
       rate: 0.21
     - up_to: 200000
       rate: 0.23
-    - up_to:
+    - up_to: 300000
       rate: 0.27
+    - up_to:
+      rate: 0.30
   general_income_tax_brackets:
     - up_to: 12450
       rate: 0.19
@@ -86,6 +93,17 @@ planning:
       - 0.03
       - 0.05
       - 0.07
+  monte_carlo:
+    enabled: true
+    simulations: 500
+    seed: 42
+    distribution: normal
+    target_values:
+      - 500000
+      - 750000
+      - 1000000
+  emergency_fund_blocks_investing: true
+  life_events: []
 
 scenario_manager:
   scenarios:

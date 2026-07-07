@@ -13,10 +13,15 @@ COLUMN_LABELS_ES: dict[str, str] = {
     "age": "edad",
     "gross_wealth": "patrimonio_bruto",
     "net_wealth": "patrimonio_neto",
+    "net_liquidable_wealth": "patrimonio_neto_liquidable",
     "real_net_wealth": "patrimonio_neto_real",
     "taxes_paid": "impuestos",
+    "latent_taxes": "impuestos_latentes",
     "fees_paid": "comisiones",
     "mortgage_balance": "saldo_hipoteca",
+    "home_equity": "valor_neto_vivienda",
+    "net_wealth_excluding_home_equity": "patrimonio_sin_vivienda",
+    "net_wealth_including_home_equity": "patrimonio_con_vivienda",
     "liquidity": "liquidez",
     "liquidity_gap": "brecha_liquidez",
     "pension_balance": "saldo_plan_pensiones",
@@ -25,6 +30,10 @@ COLUMN_LABELS_ES: dict[str, str] = {
     "annual_contribution": "aportacion_anual",
     "withdrawal": "rescate",
     "withdrawal_tax": "impuesto_rescate",
+    "out_of_pocket_contribution": "aportacion_de_bolsillo",
+    "total_contributions": "aportaciones_totales",
+    "investable_savings": "ahorro_invertible",
+    "life_event_expenses": "gastos_eventos_vida",
     "extra_mortgage_amortization": "amortizacion_extra_hipoteca",
     "assumptions": "supuestos",
     "scenario": "escenario",
@@ -50,6 +59,21 @@ COLUMN_LABELS_ES: dict[str, str] = {
     "severity": "severidad",
     "section": "seccion",
     "product_name": "nombre_producto",
+    "simulation_years": "años_simulacion",
+    "annual_savings_assumed": "ahorro_anual_asumido",
+    "assumed_nominal_return": "rentabilidad_nominal_asumida",
+    "assumed_inflation": "inflacion_asumida",
+    "real_return_approximation": "rentabilidad_real_aproximada",
+    "total_fees": "comisiones_totales",
+    "estimated_taxes": "impuestos_estimados",
+    "final_nominal_value": "valor_nominal_final",
+    "final_real_value": "valor_real_final",
+    "nominal_warning": "aviso_nominal",
+    "scenario_template": "plantilla_escenario",
+    "simulations": "simulaciones",
+    "final_nominal": "valor_nominal_final",
+    "final_real": "valor_real_final",
+    "gross_final": "valor_bruto_final",
 }
 
 VALUE_LABELS_ES: dict[str, str] = {
@@ -85,6 +109,15 @@ VALUE_LABELS_ES: dict[str, str] = {
     "preferred=investment": "preferido=inversion",
     "preferred=mortgage_amortization": "preferido=amortizacion_hipoteca",
     "liquidity_below_target": "liquidez_por_debajo_del_objetivo",
+    "conservative": "conservador",
+    "optimistic": "optimista",
+    "high_inflation": "inflacion_alta",
+    "low_savings": "ahorro_bajo",
+    "bad_first_decade": "mala_primera_decada",
+    "job_income_interruption": "interrupcion_ingresos",
+    "Nominal future euros are not current purchasing power.": (
+        "Los euros nominales futuros no equivalen a poder adquisitivo actual."
+    ),
 }
 
 METRIC_LABELS_ES: dict[str, str] = {
@@ -96,7 +129,6 @@ METRIC_LABELS_ES: dict[str, str] = {
     "mortgage_balance": "Saldo de hipoteca",
     "liquidity_gap": "Brecha de liquidez",
 }
-
 
 def translate_value(value: Any) -> Any:
     """Translate known display values to Spanish and leave other values unchanged."""

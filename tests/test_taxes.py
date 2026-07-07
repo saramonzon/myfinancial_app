@@ -19,6 +19,18 @@ def test_savings_tax_uses_progressive_brackets() -> None:
     assert tax == pytest.approx(6_000 * 0.19 + 4_000 * 0.21)
 
 
+def test_savings_tax_uses_30_percent_above_300000() -> None:
+    tax = savings_tax(350_000, TaxConfig())
+
+    assert tax == pytest.approx(
+        6_000 * 0.19
+        + (50_000 - 6_000) * 0.21
+        + (200_000 - 50_000) * 0.23
+        + (300_000 - 200_000) * 0.27
+        + 50_000 * 0.30
+    )
+
+
 def test_capital_gains_tax_taxes_only_gain() -> None:
     tax = capital_gains_tax(15_000, 10_000, TaxConfig())
 

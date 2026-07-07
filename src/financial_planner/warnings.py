@@ -18,6 +18,26 @@ def validation_warnings(config: SimulationConfig) -> list[ValidationWarning]:
     """Return visible warnings for assumptions that deserve user review."""
 
     warnings: list[ValidationWarning] = []
+    warnings.extend(
+        [
+            ValidationWarning(
+                code="deterministic_returns_not_forecasts",
+                message="Deterministic expected returns are planning assumptions, not forecasts.",
+            ),
+            ValidationWarning(
+                code="nominal_future_euros",
+                message="Nominal future euros are not current purchasing power; review real values.",
+            ),
+            ValidationWarning(
+                code="simplified_taxes",
+                message="Tax calculations are simplified and configurable.",
+            ),
+            ValidationWarning(
+                code="approximate_pension_modelling",
+                message="Pension-plan contribution and redemption modelling is approximate.",
+            ),
+        ]
+    )
 
     if config.household.current_liquidity < config.household.target_liquidity:
         warnings.append(
@@ -32,6 +52,16 @@ def validation_warnings(config: SimulationConfig) -> list[ValidationWarning]:
             ValidationWarning(
                 code="no_annual_savings",
                 message="Annual savings is zero, so accumulation strategies cannot receive contributions.",
+            )
+        )
+    if not config.household.derive_savings_from_income:
+        warnings.append(
+            ValidationWarning(
+                code="fixed_annual_savings",
+                message=(
+                    "Annual savings is assumed available every year unless "
+                    "income/expense mode is enabled."
+                ),
             )
         )
 

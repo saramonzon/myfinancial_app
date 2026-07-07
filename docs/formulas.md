@@ -63,10 +63,14 @@ total_redemption_tax = annual_incremental_tax * pension_redemption_years
 ## Net wealth
 
 ```text
-net_wealth =
+net_liquidable_wealth =
   liquidable_assets_after_tax
   + current_liquidity
   - mortgage_balance
+
+net_wealth_including_home_equity =
+  net_liquidable_wealth
+  + max(home_value - mortgage_balance, 0)
 ```
 
 ## Break-even commission
@@ -76,4 +80,22 @@ find commission where:
   final_net_wealth(strategy, commission)
   =
   final_net_wealth(benchmark_strategy)
+```
+
+## Emergency-fund investment rule
+
+```text
+available_savings = fixed_savings_or_income_minus_expenses
+available_savings *= active_life_event_savings_multipliers
+available_savings -= life_event_expenses_not_paid_from_liquidity
+
+liquidity_top_up = min(available_savings, target_liquidity - current_liquidity)
+investable_savings = available_savings - liquidity_top_up
+```
+
+## Monte Carlo return sampling
+
+```text
+normal_return = Normal(mean_return, volatility)
+lognormal_return = LogNormal(log(1 + mean_return) - 0.5 * volatility^2, volatility) - 1
 ```

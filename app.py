@@ -221,6 +221,14 @@ with decision_tab:
 with scenario_tab:
     st.subheader("Resumen de escenarios")
     st.dataframe(localize_dataframe(bundle.scenario_summary), width="stretch")
+    st.subheader("Plantillas de escenario")
+    st.dataframe(localize_dataframe(bundle.scenario_templates), width="stretch")
+    st.subheader("Comprobación de coherencia")
+    st.warning("Los euros nominales futuros no equivalen a poder adquisitivo actual.")
+    st.dataframe(localize_dataframe(bundle.sanity_check), width="stretch")
+    if not bundle.monte_carlo.empty:
+        st.subheader("Monte Carlo")
+        st.dataframe(localize_dataframe(bundle.monte_carlo), width="stretch")
     st.subheader("Sensibilidad")
     st.dataframe(localize_dataframe(sensitivity_df), width="stretch")
     st.plotly_chart(

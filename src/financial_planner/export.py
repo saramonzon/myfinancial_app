@@ -86,8 +86,17 @@ def export_results_to_excel(
         localize_dataframe(bundle.scenario_summary).to_excel(
             writer, index=False, sheet_name="escenarios"
         )
+        localize_dataframe(bundle.scenario_templates).to_excel(
+            writer, index=False, sheet_name="plantillas_escenario"
+        )
         localize_dataframe(bundle.sensitivity).to_excel(
             writer, index=False, sheet_name="sensibilidad"
+        )
+        localize_dataframe(bundle.sanity_check).to_excel(
+            writer, index=False, sheet_name="comprobacion"
+        )
+        localize_dataframe(bundle.monte_carlo).to_excel(
+            writer, index=False, sheet_name="monte_carlo"
         )
         localize_dataframe(bundle.product_comparison).to_excel(
             writer, index=False, sheet_name="productos"
@@ -143,6 +152,18 @@ def export_results_to_markdown(
         "## Resumen de escenarios",
         "",
         dataframe_to_markdown(localize_dataframe(bundle.scenario_summary)),
+        "",
+        "## Plantillas de escenario",
+        "",
+        dataframe_to_markdown(localize_dataframe(bundle.scenario_templates)),
+        "",
+        "## Comprobación de coherencia",
+        "",
+        dataframe_to_markdown(localize_dataframe(bundle.sanity_check)),
+        "",
+        "## Monte Carlo",
+        "",
+        dataframe_to_markdown(localize_dataframe(bundle.monte_carlo)),
         "",
         "## Resumen de sensibilidad",
         "",

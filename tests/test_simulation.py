@@ -5,6 +5,8 @@ from financial_planner.models import (
     HouseholdConfig,
     MortgageConfig,
     Person,
+    LifeEventConfig,
+    MonteCarloConfig,
     PlanningConfig,
     ProductConfig,
     ScenarioConfig,
@@ -13,7 +15,10 @@ from financial_planner.models import (
     StrategyConfig,
     WithdrawalConfig,
 )
+from financial_planner.cashflows import cash_flow_for_year
+from financial_planner.monte_carlo import monte_carlo_summary, run_product_monte_carlo
 from financial_planner.scenarios import run_scenarios
+from financial_planner.scenarios import scenario_templates
 from financial_planner.sensitivity import commission_return_sensitivity
 from financial_planner.simulation import results_to_dataframe, run_simulation
 
@@ -116,7 +121,7 @@ def test_inflation_adjusted_values_and_liquidity_gap_are_recorded() -> None:
 
     assert "real_net_wealth" in df.columns
     assert "liquidity_gap" in df.columns
-    assert df["liquidity_gap"].eq(5_000).all()
+    assert df["liquidity_gap"].iloc[0] == 0
     assert (df["real_net_wealth"].abs() <= df["net_wealth"].abs()).all()
 
 
@@ -132,7 +137,7 @@ def test_mixed_strategy_allocation_runs() -> None:
     assert df["investment_balance"].iloc[-1] > 0
     assert df["pension_balance"].iloc[-1] > 0
     assert df["unit_linked_balance"].iloc[-1] > 0
-    assert df["extra_mortgage_amortization"].iloc[0] == 1_200
+    assert df["extra_mortgage_amortization"].iloc[0] == 200
 
 
 def test_configured_withdrawals_reduce_fund_balance_and_record_tax() -> None:
@@ -182,3 +187,66 @@ def test_commission_return_sensitivity_grid() -> None:
         "final_net_wealth",
         "final_real_net_wealth",
     }
+
+
+def test_contribution_timing_and_total_contributions_tracking() -> None:
+    df = results_to_dataframe(run_simulation(sample_config()))
+    fund_rows = df.loc[df["strategy"] == "investment_fund_only"].sort_values("year")
+
+    assert fund_rows["investment_balance"].iloc[0] == 1_000 * 1.05 * (1 - 0.005)
+    assert fund_rows["total_contributions"].iloc[-1] == 13_000
+
+
+def test_life_events_reduce_liquidity_and_investable_savings() -> None:
+    config = sample_config().model_copy(
+        update={
+            "planning": PlanningConfig(
+                emergency_fund_blocks_investing=False,
+                life_events=[
+                    LifeEventConfig(
+                        name="test_event",
+                        start_year=2026,
+                        one_off_expense=2_000,
+                        savings_multiplier=0.5,
+                    )
+                ],
+            )
+        }
+    )
+
+    cash_flow = cash_flow_for_year(config, 2026, config.household.current_liquidity)
+
+    assert cash_flow.life_event_expenses == 2_000
+    assert cash_flow.liquidity == 3_000
+    assert cash_flow.investable_savings == 3_000
+
+
+def test_monte_carlo_reproducibility_with_fixed_seed() -> None:
+    planning = PlanningConfig(
+        monte_carlo=MonteCarloConfig(
+            enabled=True,
+            simulations=20,
+            seed=123,
+            target_values=[10_000],
+        )
+    )
+    config = sample_config().model_copy(update={"planning": planning})
+    first = run_product_monte_carlo(config)
+    second = run_product_monte_carlo(config)
+
+    assert first["final_real"].tolist() == second["final_real"].tolist()
+    assert not monte_carlo_summary(config).empty
+
+
+def test_scenario_templates_include_required_cases() -> None:
+    templates = scenario_templates(sample_config())
+
+    assert {
+        "conservative",
+        "base",
+        "optimistic",
+        "high_inflation",
+        "low_savings",
+        "bad_first_decade",
+        "job_income_interruption",
+    }.issubset(set(templates))

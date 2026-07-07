@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from financial_planner.models import ScenarioConfig, SimulationConfig, StrategyResult
+from financial_planner.models import LifeEventConfig, ScenarioConfig, SimulationConfig, StrategyResult
 from financial_planner.simulation import run_simulation
 
 
@@ -54,3 +54,56 @@ def run_scenarios(config: SimulationConfig) -> dict[str, list[StrategyResult]]:
         scenario_name: run_simulation(scenario_config)
         for scenario_name, scenario_config in configured_scenarios(config)
     }
+
+
+def scenario_templates(config: SimulationConfig) -> dict[str, SimulationConfig]:
+    """Return generic scenario templates for realism checks."""
+
+    current_year = config.household.current_year
+    templates: dict[str, SimulationConfig] = {
+        "conservative": apply_scenario(
+            config,
+            ScenarioConfig(
+                name="conservative",
+                expected_return_shift=-0.02,
+                commission_shift=0.002,
+                inflation=config.assumptions.inflation + 0.005,
+            ),
+        ),
+        "base": config,
+        "optimistic": apply_scenario(
+            config,
+            ScenarioConfig(
+                name="optimistic",
+                expected_return_shift=0.015,
+                commission_shift=-0.001,
+                inflation=max(config.assumptions.inflation - 0.003, 0.0),
+            ),
+        ),
+        "high_inflation": apply_scenario(
+            config,
+            ScenarioConfig(name="high_inflation", inflation=config.assumptions.inflation + 0.02),
+        ),
+        "low_savings": apply_scenario(
+            config,
+            ScenarioConfig(name="low_savings", annual_savings=config.household.annual_savings * 0.7),
+        ),
+    }
+
+    bad_decade_data = config.model_dump()
+    for product in bad_decade_data["products"]:
+        product["expected_return"] = max(product["expected_return"] - 0.03, -1.0)
+    templates["bad_first_decade"] = SimulationConfig.model_validate(bad_decade_data)
+
+    interruption_data = config.model_dump()
+    interruption_data["planning"]["life_events"].append(
+        LifeEventConfig(
+            name="job_income_interruption",
+            start_year=current_year + 1,
+            end_year=current_year + 1,
+            recurring_annual_expense=0.0,
+            savings_multiplier=0.0,
+        ).model_dump()
+    )
+    templates["job_income_interruption"] = SimulationConfig.model_validate(interruption_data)
+    return templates

@@ -13,8 +13,9 @@ from financial_planner.decision import (
     break_even_commission,
 )
 from financial_planner.models import SimulationConfig, StrategyResult
+from financial_planner.monte_carlo import monte_carlo_summary
 from financial_planner.products import product_comparison_dataframe
-from financial_planner.scenarios import run_scenarios
+from financial_planner.scenarios import run_scenarios, scenario_templates
 from financial_planner.sensitivity import commission_return_sensitivity
 from financial_planner.simulation import results_to_dataframe, run_simulation
 from financial_planner.warnings import ValidationWarning, validation_warnings
@@ -37,6 +38,9 @@ class ReportBundle:
     break_even: BreakEvenCommissionResult
     amortize_vs_invest: AmortizeVsInvestDecision
     decision_summary: pd.DataFrame
+    sanity_check: pd.DataFrame
+    monte_carlo: pd.DataFrame
+    scenario_templates: pd.DataFrame
 
 
 def final_results_dataframe(yearly: pd.DataFrame) -> pd.DataFrame:
@@ -124,6 +128,60 @@ def decision_summary_dataframe(
     )
 
 
+def sanity_check_dataframe(config: SimulationConfig, final: pd.DataFrame) -> pd.DataFrame:
+    """Return audit rows explaining scale and realism of final values."""
+
+    rows: list[dict[str, float | str | int]] = []
+    simulation_years = int(final["year"].max() - config.household.current_year + 1)
+    for record in final.to_dict(orient="records"):
+        expected_return = ""
+        assumptions = record.get("assumptions", {})
+        if isinstance(assumptions, dict):
+            expected_return = assumptions.get("expected_return", "")
+        rows.append(
+            {
+                "strategy": record["strategy"],
+                "simulation_years": simulation_years,
+                "annual_savings_assumed": config.household.annual_savings,
+                "total_contributions": record.get("total_contributions", 0.0),
+                "assumed_nominal_return": expected_return,
+                "assumed_inflation": config.assumptions.inflation,
+                "real_return_approximation": (
+                    ((1 + float(expected_return)) / (1 + config.assumptions.inflation) - 1)
+                    if expected_return != ""
+                    else ""
+                ),
+                "total_fees": record.get("fees_paid", 0.0),
+                "estimated_taxes": record.get("taxes_paid", 0.0),
+                "latent_taxes": record.get("latent_taxes", 0.0),
+                "final_nominal_value": record.get("net_wealth", 0.0),
+                "final_real_value": record.get("real_net_wealth", 0.0),
+                "nominal_warning": "Nominal future euros are not current purchasing power.",
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def scenario_template_summary_dataframe(config: SimulationConfig) -> pd.DataFrame:
+    """Return final net wealth summaries for built-in scenario templates."""
+
+    rows: list[dict[str, float | str]] = []
+    for name, scenario_config in scenario_templates(config).items():
+        scenario_results = run_simulation(scenario_config)
+        scenario_final = final_results_dataframe(results_to_dataframe(scenario_results))
+        for record in scenario_final.to_dict(orient="records"):
+            rows.append(
+                {
+                    "scenario_template": name,
+                    "strategy": record["strategy"],
+                    "net_wealth": record["net_wealth"],
+                    "real_net_wealth": record["real_net_wealth"],
+                    "total_contributions": record.get("total_contributions", 0.0),
+                }
+            )
+    return pd.DataFrame(rows)
+
+
 def build_report_bundle(config: SimulationConfig) -> ReportBundle:
     """Run all v1.0 reporting calculations from one validated config."""
 
@@ -135,6 +193,7 @@ def build_report_bundle(config: SimulationConfig) -> ReportBundle:
     warnings = validation_warnings(config)
     break_even = break_even_commission(config)
     amortize_vs_invest = amortize_vs_invest_decision(config)
+    sanity_check = sanity_check_dataframe(config, final)
     return ReportBundle(
         config=config,
         results=results,
@@ -149,4 +208,7 @@ def build_report_bundle(config: SimulationConfig) -> ReportBundle:
         break_even=break_even,
         amortize_vs_invest=amortize_vs_invest,
         decision_summary=decision_summary_dataframe(break_even, amortize_vs_invest),
+        sanity_check=sanity_check,
+        monte_carlo=monte_carlo_summary(config),
+        scenario_templates=scenario_template_summary_dataframe(config),
     )

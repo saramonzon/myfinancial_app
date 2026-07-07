@@ -18,6 +18,8 @@ def test_markdown_export_contains_final_comparison(tmp_path) -> None:
     assert "Comparación final" in text
     assert "Ayudantes de decisión" in text
     assert "Resumen de escenarios" in text
+    assert "Comprobación de coherencia" in text
+    assert "Monte Carlo" in text
     assert "Resumen de sensibilidad" in text
     assert "solo_fondo_inversion" in text
 
@@ -33,7 +35,10 @@ def test_excel_export_contains_v1_sheets(tmp_path) -> None:
         "resultados_anuales",
         "comparacion_final",
         "escenarios",
+        "plantillas_escenario",
         "sensibilidad",
+        "comprobacion",
+        "monte_carlo",
         "productos",
         "decisiones",
         "avisos",

@@ -47,6 +47,11 @@ class HouseholdConfig(PlannerBaseModel):
     annual_savings: float = Field(ge=0)
     current_liquidity: float = Field(ge=0)
     target_liquidity: float = Field(ge=0)
+    derive_savings_from_income: bool = False
+    annual_expenses: float | None = Field(default=None, ge=0)
+    effective_income_tax_rate: float = Field(default=0.0, ge=0, le=1)
+    home_value: float = Field(default=0.0, ge=0)
+    include_home_equity_in_net_wealth: bool = False
 
 
 class MortgageConfig(PlannerBaseModel):
@@ -74,7 +79,8 @@ class TaxConfig(PlannerBaseModel):
             TaxBracket(up_to=6_000, rate=0.19),
             TaxBracket(up_to=50_000, rate=0.21),
             TaxBracket(up_to=200_000, rate=0.23),
-            TaxBracket(up_to=None, rate=0.27),
+            TaxBracket(up_to=300_000, rate=0.27),
+            TaxBracket(up_to=None, rate=0.30),
         ]
     )
     general_income_tax_brackets: list[TaxBracket] = Field(
@@ -136,6 +142,24 @@ class WithdrawalConfig(PlannerBaseModel):
         return end_year
 
 
+class LifeEventConfig(PlannerBaseModel):
+    name: str
+    start_year: int = Field(ge=1900, le=2200)
+    end_year: int | None = Field(default=None, ge=1900, le=2200)
+    one_off_expense: float = Field(default=0.0, ge=0)
+    recurring_annual_expense: float = Field(default=0.0, ge=0)
+    savings_multiplier: float = Field(default=1.0, ge=0, le=2)
+
+    @field_validator("end_year")
+    @classmethod
+    def validate_end_year(cls, end_year: int | None, info: object) -> int | None:
+        data = getattr(info, "data", {})
+        start_year = data.get("start_year") if isinstance(data, dict) else None
+        if start_year is not None and end_year is not None and end_year < start_year:
+            raise ValueError("end_year must be greater than or equal to start_year.")
+        return end_year
+
+
 class MixedAllocationConfig(PlannerBaseModel):
     investment_fund: float = Field(default=0.40, ge=0, le=1)
     pension_plan: float = Field(default=0.20, ge=0, le=1)
@@ -175,6 +199,14 @@ class SensitivityConfig(PlannerBaseModel):
         return rates
 
 
+class MonteCarloConfig(PlannerBaseModel):
+    enabled: bool = False
+    simulations: PositiveInt = 500
+    seed: int | None = 42
+    distribution: Literal["normal", "lognormal"] = "normal"
+    target_values: list[float] = Field(default_factory=list)
+
+
 class ScenarioConfig(PlannerBaseModel):
     name: str
     annual_savings: float | None = Field(default=None, ge=0)
@@ -202,12 +234,16 @@ class PlanningConfig(PlannerBaseModel):
         default_factory=MixedAllocationConfig
     )
     sensitivity: SensitivityConfig = Field(default_factory=SensitivityConfig)
+    monte_carlo: MonteCarloConfig = Field(default_factory=MonteCarloConfig)
+    life_events: list[LifeEventConfig] = Field(default_factory=list)
+    emergency_fund_blocks_investing: bool = True
 
 
 class ProductConfig(PlannerBaseModel):
     name: str
     type: ProductType
     expected_return: float = Field(ge=-1, le=1)
+    volatility: float = Field(default=0.0, ge=0, le=2)
     annual_commission: float = Field(ge=0, le=1)
     tax_treatment: TaxTreatment
     liquidity: str
@@ -262,16 +298,25 @@ class YearlyResult(PlannerBaseModel):
     age: int
     gross_wealth: float
     net_wealth: float
+    net_liquidable_wealth: float = 0
     real_net_wealth: float = 0
     taxes_paid: float
+    latent_taxes: float = 0
     fees_paid: float
     mortgage_balance: float
+    home_equity: float = 0
+    net_wealth_excluding_home_equity: float = 0
+    net_wealth_including_home_equity: float = 0
     liquidity: float
     liquidity_gap: float = 0
     pension_balance: float = 0
     investment_balance: float = 0
     unit_linked_balance: float = 0
     annual_contribution: float = 0
+    out_of_pocket_contribution: float = 0
+    total_contributions: float = 0
+    investable_savings: float = 0
+    life_event_expenses: float = 0
     withdrawal: float = 0
     withdrawal_tax: float = 0
     extra_mortgage_amortization: float = 0

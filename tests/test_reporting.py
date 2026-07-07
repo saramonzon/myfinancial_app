@@ -13,6 +13,7 @@ def test_report_bundle_contains_all_release_tables() -> None:
     assert not bundle.sensitivity.empty
     assert not bundle.product_comparison.empty
     assert not bundle.decision_summary.empty
+    assert not bundle.sanity_check.empty
     assert {"baseline"} == set(bundle.scenarios)
 
 
